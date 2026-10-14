@@ -111,7 +111,7 @@ export function filterChoices(choices, term) {
   return found.length ? found : [new Separator(c.dim('  Nada encontrado'))];
 }
 
-const normalize = (s) =>
+export const normalize = (s) =>
   s
     .normalize('NFD')
     .replace(/\p{Diacritic}/gu, '')

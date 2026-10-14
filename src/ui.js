@@ -2,6 +2,7 @@
 import { readFileSync } from 'node:fs';
 import { styleText, stripVTControlCharacters } from 'node:util';
 import * as inquirer from '@inquirer/prompts';
+import searchSelectPrompt from './search-select.js';
 
 export const c = {
   brand: (t) => styleText(['bold', 'magenta'], t),
@@ -38,6 +39,7 @@ const theme = {
   style: {
     message: (text) => c.bold(text),
     answer: (text) => c.accent(text),
+    searchTerm: (text) => c.accent(text),
     highlight: (text) => text,
     description: (text) => c.dim(`  ${text}`),
     keysHelpTip: (keys) =>
@@ -52,6 +54,7 @@ export const input = themed(inquirer.input);
 export const confirm = themed(inquirer.confirm);
 export const password = themed(inquirer.password);
 export const search = themed(inquirer.search); // select com filtro: digitar "fe" acha "feat"
+export const searchSelect = themed(searchSelectPrompt); // select + busca local e remota (menu de atividades)
 export const { Separator } = inquirer;
 
 // ---------- Mensagens ----------
