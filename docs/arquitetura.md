@@ -153,6 +153,14 @@ disparado por tecla, **não redesenha a tela**, porque as atualizações da tecl
 a do efeito se perde. Por isso o estado "buscando" é marcado no próprio keypress, junto com
 o termo, e o efeito só agenda a busca.
 
+**Texto longo numa linha própria (`field` em `ui.js`).** O `@inquirer` quebra a linha por
+palavra (`wrap-ansi`), mas calcula o cursor com o `readline`, que conta a quebra caractere a
+caractere. Quando a descrição passava da largura do terminal, cada quebra deixava o cursor
+algumas colunas antes do fim do texto. Os campos de texto longo (descrição, mensagem, título,
+corpo e BREAKING CHANGE) mostram o valor na linha de baixo e com espaços que não quebram (NBSP,
+só na tela), então a quebra cai exatamente na largura, onde o cursor é calculado. O valor
+devolvido continua com espaços normais.
+
 **`git commit --no-edit` sem `-m`.** Sem `-m`, o git roda o `prepare-commit-msg` com o
 arquivo vazio (sem os comentários do template) e usa o que o hook gravou, sem abrir o
 editor. É isso que o `npm run commit` usa.

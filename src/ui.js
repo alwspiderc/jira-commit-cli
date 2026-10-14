@@ -57,6 +57,21 @@ export const search = themed(inquirer.search); // select com filtro: digitar "fe
 export const searchSelect = themed(searchSelectPrompt); // select + busca local e remota (menu de atividades)
 export const { Separator } = inquirer;
 
+/**
+ * Exibição de texto livre que pode passar da largura do terminal. O @inquirer quebra a linha por
+ * palavra, mas põe o cursor como se quebrasse por caractere: cada quebra deixava o cursor algumas
+ * colunas antes do fim do texto. Aqui o texto vai numa linha própria e com espaços que não quebram
+ * (NBSP, só na tela; o valor continua com espaços normais), então a quebra cai exatamente na
+ * largura, onde o readline espera o cursor.
+ */
+export function fieldTransformer(value, { isFinal }) {
+  if (isFinal) return c.accent(value);
+  return `\n${value.replaceAll(' ', ' ') || ' '}`;
+}
+
+/** input para texto longo (descrição, título, corpo): ver fieldTransformer. */
+export const field = (config) => input({ transformer: fieldTransformer, ...config });
+
 // ---------- Mensagens ----------
 
 export const log = {

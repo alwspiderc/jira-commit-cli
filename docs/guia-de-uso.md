@@ -169,7 +169,8 @@ Com a seção `commit` no `.jira-commit.json`, um commit sem mensagem (`npm run 
 ◆ Escopo · digite para filtrar sign
 ❯ sign-in
   sign-up
-◆ Descrição · feat(sign-up): … cria a tela de confirmação de e-mail
+◆ Descrição · feat(sign-up): …
+cria a tela de confirmação de e-mail
 ```
 
 - **Tipo e escopo:** digite parte do nome para filtrar (sem se preocupar com acento ou
