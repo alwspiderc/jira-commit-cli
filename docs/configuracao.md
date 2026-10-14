@@ -22,7 +22,16 @@ Exemplo completo (projeto tatico-cidadao-mobile):
   "summaryPrefix": "{product} | Mobile: ",
   "format": "{prefix}{key} {subject}",
   "statuses": ["Em andamento", "PARA CORRIGIR", "Tarefas pendentes"],
-  "maxResults": 100
+  "maxResults": 100,
+  "commit": {
+    "types": [
+      { "value": "feat", "description": "Uma nova funcionalidade" },
+      { "value": "fix", "description": "Correção de bug" },
+      "chore"
+    ],
+    "scopes": ["sign-in", "sign-up", "home", "geral"],
+    "headerMaxLength": 120
+  }
 }
 ```
 
@@ -38,8 +47,26 @@ Exemplo completo (projeto tatico-cidadao-mobile):
 | `statuses` | string[] | *(todas as abertas)* | Status mostrados por padrão no menu e no `list`. Use os nomes **como aparecem na tela** |
 | `jql` | string | *(montado pela CLI)* | JQL próprio. **Substitui** `statuses` e o filtro de responsável |
 | `maxResults` | number | `20` | Máximo de atividades buscadas por vez |
-| `ai` | boolean | `true` | `false` desliga a sugestão de título por IA neste repositório |
+| `ai` | boolean | `true` | `false` desliga as sugestões por IA (descrição do commit e título da atividade) neste repositório |
 | `aiModel` | string | `"claude-opus-5-5"` | Modelo da sugestão por IA. Ex.: `"claude-haiku-5-5"` para respostas mais rápidas |
+| `commit` | object \| `false` | *(sem questionário)* | Liga as perguntas de tipo, escopo e descrição no commit. Veja abaixo. `false` = o `init` não oferece de novo |
+
+### `commit`
+
+As perguntas que o jira-commit faz num commit sem mensagem (`npm run commit` ou `git commit`
+sem `-m`). Veja o fluxo no [guia de uso](guia-de-uso.md#6-questionário-do-commit-tipo-escopo-e-descrição).
+
+| Campo | Tipo | Padrão | Descrição |
+|---|---|---|---|
+| `types` | (string \| `{ value, description }`)[] | tipos do Conventional Commits | Tipos da lista. A `description` aparece apagada ao lado do tipo e também entra no filtro |
+| `scopes` | string[] | `[]` | Escopos da lista. Vazio = a pergunta de escopo não aparece |
+| `headerMaxLength` | number | `100` | Tamanho máximo da 1ª linha. A validação da descrição já desconta o espaço da chave do Jira |
+
+Sem a seção `commit` (ou com `"commit": false`), um commit sem mensagem pede a mensagem
+inteira numa pergunta só.
+
+O `init` cria essa seção importando do `.cz-config.js`, se existir. Para o commitlint usar a
+mesma lista, veja [Commitlint com a mesma lista](guia-de-uso.md#commitlint-com-a-mesma-lista).
 
 ### Placeholders do `format`
 
@@ -124,7 +151,8 @@ editar.
 ```json
 {
   "C:/Users/voce/projetos/tatico-cidadao-mobile": {
-    "lastParent": "ABDP-2375"
+    "lastParent": "ABDP-2375",
+    "lastIssueByBranch": { "develop": "ABDP-2411" }
   }
 }
 ```
@@ -132,14 +160,15 @@ editar.
 | Campo | Uso |
 |---|---|
 | `lastParent` | Última tarefa pai usada ao criar uma subtarefa. Vem pré-selecionada na próxima vez |
+| `lastIssueByBranch` | Atividade do último commit em cada branch. O cursor do menu começa nela no próximo commit |
 
-Apagar o arquivo só faz a CLI "esquecer" a última tarefa pai.
+Apagar o arquivo só faz a CLI "esquecer" a última tarefa pai e as últimas atividades.
 
 ## IA
 
 | Variável | Efeito |
 |---|---|
-| `ANTHROPIC_API_KEY` | Liga a sugestão de título por IA |
+| `ANTHROPIC_API_KEY` | Liga as sugestões por IA (descrição do commit e título da atividade) |
 | `ANTHROPIC_AUTH_TOKEN` | Alternativa à `ANTHROPIC_API_KEY` |
 
 Sem nenhuma das duas, a IA fica desligada, mesmo com `"ai": true`.
