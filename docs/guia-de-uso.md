@@ -8,7 +8,7 @@ opções do `.jira-commit.json`, veja [configuracao.md](configuracao.md).
 - [3. Instalação](#3-instalação)
 - [4. Login (uma vez por máquina)](#4-login-uma-vez-por-máquina)
 - [5. Configurar o repositório (uma vez por repo)](#5-configurar-o-repositório-uma-vez-por-repo)
-- [6. Projetos com commitizen e commitlint](#6-projetos-com-commitizen-e-commitlint)
+- [6. Questionário do commit (tipo, escopo e descrição)](#6-questionário-do-commit-tipo-escopo-e-descrição)
 - [7. O dia a dia: commitando](#7-o-dia-a-dia-commitando)
 - [8. Criar atividade a partir do commit](#8-criar-atividade-a-partir-do-commit)
 - [9. Sugestão de título por IA](#9-sugestão-de-título-por-ia)
@@ -108,7 +108,7 @@ arquivo.
 npx jira-commit init
 ```
 
-O `init` faz duas coisas.
+O `init` pode ser rodado de novo sem problema: ele só pergunta o que ainda falta.
 
 **a) Cria o `.jira-commit.json`** (se ainda não existir), perguntando:
 
@@ -121,48 +121,99 @@ O `init` faz duas coisas.
 
 **Commite o `.jira-commit.json`.** Ele é a configuração do time para aquele repositório.
 
-**b) Instala o hook** `prepare-commit-msg`:
+**b) Configura o questionário do commit** (a seção `commit` do `.jira-commit.json`):
+- se o projeto tem um **`.cz-config.js`**, oferece importar os tipos, os escopos e o
+  limite de caracteres dele;
+- senão, oferece os tipos padrão do Conventional Commits, sem escopos.
+
+Se você recusar, o `init` grava `"commit": false` e não pergunta de novo. Detalhes na
+[seção 6](#6-questionário-do-commit-tipo-escopo-e-descrição).
+
+**c) Instala o hook** `prepare-commit-msg`:
 - se o projeto usa **Husky** (tem a pasta `.husky/`), a linha é adicionada em
   `.husky/prepare-commit-msg`;
 - senão, vai para `.git/hooks/prepare-commit-msg`;
 - se já existir um hook, a linha do jira-commit é **acrescentada no final**, sem apagar
-  nada. Rodar o `init` de novo não duplica a linha.
+  nada. Rodar o `init` de novo não duplica a linha;
+- se o hook tiver o **commitizen** (`npx cz --hook` ou `git cz --hook`) e o questionário
+  estiver ligado, oferece tirar o cz, para as perguntas não aparecerem duas vezes.
 
-## 6. Projetos com commitizen e commitlint
+**d) Cria o script `npm run commit`** (`git commit --no-edit`), que faz as perguntas e
+commita sem abrir o editor do git no fim. Se já existir um script `commit` (ex.: `git-cz`),
+pergunta antes de trocar.
 
-Muitos projetos já têm um fluxo assim no `prepare-commit-msg`:
+## 6. Questionário do commit (tipo, escopo e descrição)
 
-```sh
-exec < /dev/tty && npx cz --hook || true      # questionário do commitizen
-# jira-commit                                 # adicionado pelo init
-if sh -c ": >/dev/tty" ...; then npx --no-install jira-commit hook "$1" "$2" < /dev/tty; fi
-```
-
-A ordem importa: **o cz roda primeiro** e escreve a mensagem, e depois o jira-commit
-olha essa mensagem.
-
-- Se você **digitar o ticket no cz**, a mensagem já chega com a chave e o jira-commit
-  não aparece.
-- Se você **deixar o ticket em branco**, o jira-commit abre o menu de atividades.
-
-Para isso funcionar, o ticket precisa ser **opcional** no cz. No `.cz-config.js`:
-
-```js
-allowTicketNumber: true,
-isTicketNumberRequired: false,   // era true
-ticketNumberPrefix: 'LOJA-',
-```
-
-Com `"format": "{prefix}{key} {subject}"`, a chave entra **depois** do `tipo(escopo):`, no
-mesmo lugar em que o cz colocaria. Assim o commitlint continua aceitando a mensagem:
+Com a seção `commit` no `.jira-commit.json`, um commit sem mensagem (`npm run commit` ou
+`git commit` sem `-m`) começa por três perguntas:
 
 ```text
-feat(home): LOJA-2410 cria o header da Home
+◆ jira-commit  LOJA · develop
+│ (mensagem vazia)
+
+◆ Tipo · digite para filtrar fe
+❯ feat      Uma nova funcionalidade
+◆ Escopo · digite para filtrar sign
+❯ sign-in
+  sign-up
+◆ Descrição · feat(sign-up): … cria a tela de confirmação de e-mail
 ```
 
-> Atenção: com `"format": "{key}: {message}"` a mensagem ficaria
-> `LOJA-2410: feat(home): ...` e o **commitlint rejeitaria**, porque o tipo precisa ser a
-> primeira coisa.
+- **Tipo e escopo:** digite parte do nome para filtrar (sem se preocupar com acento ou
+  maiúscula) e aperte Enter. As setas também funcionam. O escopo tem a opção
+  "— sem escopo" no fim da lista e só aparece se o projeto tiver escopos.
+- **Descrição:** o que vem depois de `tipo(escopo):`. O limite de tamanho já desconta o
+  espaço da chave do Jira, então o commitlint não reclama depois. Com IA ligada, ela já
+  vem preenchida ([seção 9](#9-sugestão-de-título-por-ia)).
+- **Corpo e BREAKING CHANGE** não são perguntados em todo commit. Quando precisar, use a
+  ação **¶ Adicionar corpo / BREAKING CHANGE** no menu de atividades
+  ([seção 7](#7-o-dia-a-dia-commitando)).
+
+Depois disso vem o menu de atividades, e a chave entra no lugar certo:
+
+```text
+feat(sign-up): LOJA-2410 cria a tela de confirmação de e-mail
+```
+
+**Sem editor no fim:** com `git commit`, o git abre o editor depois das perguntas, para
+você revisar a mensagem. Com `npm run commit`, o commit sai direto.
+
+**Com `-m`:** `git commit -m "feat(home): ..."` pula as perguntas e vai direto ao menu de
+atividades.
+
+### Commitlint com a mesma lista
+
+Para os tipos e escopos ficarem num lugar só, faça o `commitlint.config.cjs` ler o
+`.jira-commit.json`:
+
+```js
+// Tipos e escopos vêm do .jira-commit.json: a mesma lista que o jira-commit mostra no commit
+const { commit } = require('./.jira-commit.json');
+
+module.exports = {
+  extends: ['@commitlint/config-conventional'],
+  rules: {
+    'type-enum': [2, 'always', commit.types.map((t) => t.value ?? t)],
+    'scope-enum': [2, 'always', commit.scopes],
+    'header-max-length': [2, 'always', commit.headerMaxLength],
+    'subject-case': [0], // a descrição começa com a chave em maiúsculas (LOJA-12 …)
+  },
+};
+```
+
+> O `subject-case` precisa ficar desligado: com `"format": "{prefix}{key} {subject}"` a
+> descrição começa com `LOJA-12`, e a regra padrão do config-conventional rejeita isso.
+
+### Vindo do commitizen
+
+O `init` faz a migração: importa os tipos e escopos do `.cz-config.js`, tira o
+`cz --hook` do hook e troca o script `commit`. Depois de conferir que está tudo certo, dá
+para apagar o `.cz-config.js`, o bloco `config.commitizen` do `package.json` e os pacotes
+(`npm uninstall commitizen cz-customizable`).
+
+> Com `"format": "{key}: {message}"` a mensagem ficaria `LOJA-2410: feat(home): ...` e o
+> **commitlint rejeitaria**, porque o tipo precisa ser a primeira coisa. Em projetos com
+> commitlint, use `{prefix}{key} {subject}`.
 
 ## 7. O dia a dia: commitando
 
@@ -170,7 +221,8 @@ Faça o commit normalmente, **pelo terminal**:
 
 ```bash
 git add .
-git commit            # ou: npm run commit, se o projeto usa cz
+npm run commit        # com o questionário: commita sem abrir o editor no fim
+# ou: git commit, ou git commit -m "feat(home): ..."
 ```
 
 O menu tem duas partes: **ações** no topo e **atividades** em árvore embaixo.
@@ -183,6 +235,7 @@ O menu tem duas partes: **ações** no topo e **atividades** em árvore embaixo.
   + Criar nova atividade
   ⋯ Ver outros status
   ✎ Digitar a chave
+  ¶ Adicionar corpo / BREAKING CHANGE
   ↷ Pular
  ── suas atividades (31) ─────────────────
 ❯ LOJA-2375  LOJA DO BAIRRO | Mobile - Benefícios: Criar tela de…  Tarefas pendentes
@@ -206,7 +259,7 @@ acontecendo.
 | Texto antes do `\|` apagado | O produto ("LOJA DO BAIRRO"), para destacar o nome da atividade |
 
 **Navegação:** use as setas ↑/↓ e confirme com Enter. A lista **para no fim** e não volta
-para o começo. O cursor começa na **primeira atividade**, nunca numa ação, então um Enter
+para o começo. O cursor começa numa **atividade**, nunca numa ação, então um Enter
 sem querer não cria nada.
 
 **Quais atividades aparecem:** por padrão, só as **suas** (`assignee = você`) nos status
@@ -218,6 +271,11 @@ status padrão**.
 `feature/LOJA-2410-header`), a família daquela atividade vai para o topo e o cursor
 começa nela.
 
+**Última atividade usada:** sem chave na branch, o cursor começa na atividade do último
+commit **nesta branch** (marcada com ★ última usada embaixo da lista), já que commits
+seguidos costumam ser da mesma atividade. Se ela saiu da lista (mudou de status, por
+exemplo), aparece no topo das atividades. Sem histórico, o cursor começa na primeira.
+
 **Ações:**
 
 | Ação | O que acontece |
@@ -225,6 +283,7 @@ começa nela.
 | + Criar nova atividade | Cria no Jira e já vincula ao commit ([seção 8](#8-criar-atividade-a-partir-do-commit)) |
 | ⋯ Ver outros status | Mostra todas as suas atividades abertas |
 | ✎ Digitar a chave | Para uma atividade que não é sua ou não aparece na lista. A CLI confere se a chave existe no Jira |
+| ¶ Adicionar corpo / BREAKING CHANGE | Pergunta o corpo do commit (use `\|` para quebrar linha) e o BREAKING CHANGE, os dois opcionais, e volta para o menu. Depois de preenchido, vira "¶ Editar…" |
 | ↷ Pular | Commita sem chave (o commitlint/cz do projeto pode reclamar) |
 
 ## 8. Criar atividade a partir do commit
@@ -327,7 +386,14 @@ mensagem final e o link.
 ## 9. Sugestão de título por IA
 
 É **opcional**. Se a variável `ANTHROPIC_API_KEY` (ou `ANTHROPIC_AUTH_TOKEN`) estiver
-definida no ambiente, ao criar uma atividade a CLI:
+definida no ambiente, a IA ajuda em dois lugares.
+
+**Descrição do commit** ([seção 6](#6-questionário-do-commit-tipo-escopo-e-descrição)): o
+pedido sai assim que o commit começa, enquanto você escolhe tipo e escopo. A CLI manda o diff
+do stage, a lista de arquivos e as ~10 últimas descrições do repositório, para a sugestão
+seguir o estilo do time. A descrição chega preenchida e **editável**.
+
+**Título da atividade**, ao criar uma pela CLI:
 
 1. lê o diff do que está no stage (até ~8 mil caracteres), a lista de arquivos, o texto
    do commit e o título da tarefa pai;
@@ -335,8 +401,8 @@ definida no ambiente, ao criar uma atividade a CLI:
    Home");
 3. coloca a sugestão no campo de título, **editável**.
 
-Sem a chave, ou se a IA falhar ou demorar mais de 8 segundos, o campo vem com o texto do
-commit, como sempre.
+Sem a chave, ou se a IA falhar ou demorar mais de 8 segundos, o título vem com o texto do
+commit e a descrição vem vazia, como sempre.
 
 ```bash
 # Git Bash / Linux / macOS (coloque no ~/.bashrc para ficar permanente)
@@ -412,7 +478,7 @@ exatamente como aparece na lista do erro.
 - O limite é `maxResults` (padrão 20). Aumente no `.jira-commit.json`.
 
 **O commitlint rejeitou a mensagem depois do jira-commit**
-Confira se o `format` é `{prefix}{key} {subject}` ([seção 6](#6-projetos-com-commitizen-e-commitlint)).
+Confira se o `format` é `{prefix}{key} {subject}` ([seção 6](#6-questionário-do-commit-tipo-escopo-e-descrição)).
 
 **Erro ao criar: tipo de issue inválido**
 O `issueType` não existe no projeto. Rode o `init` num repositório de teste para ver os
@@ -432,8 +498,11 @@ Só quando você **cria** uma atividade e escolhe o status inicial. As atividade
 não mudam.
 
 **Posso usar a CLI sem commitizen?**
-Pode. Sem cz, o jira-commit é o único questionário do commit. Em projetos sem commitlint,
-o formato padrão `{key}: {message}` gera `LOJA-12: adiciona card`.
+Pode, e é o recomendado: com a seção `commit` no `.jira-commit.json`, o jira-commit faz as
+perguntas de tipo, escopo e descrição ([seção 6](#6-questionário-do-commit-tipo-escopo-e-descrição)).
+Sem essa seção, num `git commit` sem `-m` ele pede a mensagem inteira numa pergunta só (com
+`{prefix}` no `format`, exige `tipo(escopo): descrição`). Em projetos sem commitlint, o formato padrão
+`{key}: {message}` gera `LOJA-12: adiciona card`.
 
 **Onde fica a "última tarefa pai usada"?**
 Em `~/.config/jira-commit/state.json`, separado por repositório. É só da sua máquina e não
