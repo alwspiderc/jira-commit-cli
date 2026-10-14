@@ -49,6 +49,7 @@ Exemplo completo (projeto tatico-cidadao-mobile):
 | `maxResults` | number | `20` | Máximo de atividades buscadas por vez (no menu e na busca pelo título no projeto) |
 | `ai` | boolean | `true` | `false` desliga as sugestões por IA (descrição do commit e título da atividade) neste repositório |
 | `aiModel` | string | `"claude-opus-5-5"` | Modelo da sugestão por IA. Ex.: `"claude-haiku-5-5"` para respostas mais rápidas |
+| `storyPoints` | boolean | `true` | `false` não pergunta a estimativa (story points) ao criar uma atividade |
 | `commit` | object \| `false` | *(sem questionário)* | Liga as perguntas de tipo, escopo e descrição no commit. Veja abaixo. `false` = o `init` não oferece de novo |
 
 ### `commit`

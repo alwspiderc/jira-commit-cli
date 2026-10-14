@@ -70,7 +70,8 @@ Commite o `.jira-commit.json` gerado: ele é a configuração do time.
   - lembra a última tarefa pai usada;
   - põe o prefixo do produto no título;
   - preenche a descrição com o corpo do commit e os arquivos alterados;
-  - herda labels, componentes e sprint do pai;
+  - herda labels, componentes e sprint do pai (tarefa sem pai entra na sprint ativa);
+  - pergunta os story points (opcional);
   - permite escolher o status inicial.
 - **Compatível com commitlint:** a chave entra depois de `tipo(escopo):`, e o commitlint pode
   ler os mesmos tipos e escopos do `.jira-commit.json`. O `init` migra projetos com commitizen.

@@ -87,11 +87,53 @@ export function getMyself() {
 }
 
 /**
+ * Campo de estimativa (story points) na tela de criação do tipo, ou null se o tipo não tiver.
+ * Projeto team-managed usa "Story point estimate"; company-managed, "Story Points".
+ */
+export async function storyPointsField(projectKey, issueTypeName) {
+  const type = (await issueTypes(projectKey)).find((t) => t.name === issueTypeName);
+  if (!type) return null;
+  const data = await request(
+    `/rest/api/3/issue/createmeta/${encodeURIComponent(projectKey)}/issuetypes/${type.id}?maxResults=200`,
+  );
+  const points = data.fields.filter((f) => /story point/i.test(f.name) && f.schema?.type === 'number');
+  return (points.find((f) => /estimate/i.test(f.name)) ?? points[0])?.fieldId ?? null;
+}
+
+/** Sprint ativa do primeiro quadro do projeto que tiver uma: { id, name }, ou null (ex.: só Kanban). */
+export async function activeSprint(projectKey) {
+  const boards = await request(`/rest/agile/1.0/board?projectKeyOrId=${encodeURIComponent(projectKey)}`);
+  for (const board of boards.values ?? []) {
+    try {
+      const sprints = await request(`/rest/agile/1.0/board/${board.id}/sprint?state=active`);
+      if (sprints.values?.length) return { id: sprints.values[0].id, name: sprints.values[0].name };
+    } catch {
+      // quadro sem sprints (Kanban) responde erro: tenta o próximo
+    }
+  }
+  return null;
+}
+
+/** Coloca a issue na sprint (a API de sprints dispensa descobrir o customfield de sprint). */
+export function moveToSprint(sprintId, key) {
+  return request(`/rest/agile/1.0/sprint/${sprintId}/issue`, { method: 'POST', body: { issues: [key] } });
+}
+
+/**
  * Cria a issue já atribuída a quem está commitando e devolve a chave (ex.: PROJ-123).
  * Com parentKey vira subtarefa (o sprint vem do pai automaticamente).
- * description é um documento ADF (ver adf.js).
+ * description é um documento ADF (ver adf.js). storyPoints é { field, value } (opcional).
  */
-export async function createIssue({ projectKey, summary, issueType, parentKey, description, labels, components }) {
+export async function createIssue({
+  projectKey,
+  summary,
+  issueType,
+  parentKey,
+  description,
+  labels,
+  components,
+  storyPoints,
+}) {
   const me = await getMyself();
   const fields = {
     project: { key: projectKey },
@@ -103,6 +145,7 @@ export async function createIssue({ projectKey, summary, issueType, parentKey, d
   if (description) fields.description = description;
   if (labels?.length) fields.labels = labels;
   if (components?.length) fields.components = components;
+  if (storyPoints) fields[storyPoints.field] = storyPoints.value;
 
   const data = await request('/rest/api/3/issue', { method: 'POST', body: { fields } });
   return data.key;
