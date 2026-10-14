@@ -265,14 +265,21 @@ const separator = (label) => new Separator(c.dim(`${label} `.padEnd(40, '─')))
  * no Jira chega) e as ações no fim, para o cursor cair numa atividade e não numa ação.
  */
 function searchResults(term, remote, { cfg, issues, branchKey, lastKey, actions }) {
-  const mine = matchIssues(issues, term);
-  const others = remote.results.filter((r) => !issues.some((i) => i.key === r.key));
+  const local = matchIssues(issues, term);
+  const isMine = (r) => issues.some((i) => i.key === r.key);
+  // o Jira pode achar uma das suas que o filtro local não pegou: ela entra com as suas
+  const mine = [...local, ...remote.results.filter((r) => isMine(r) && !local.some((l) => l.key === r.key))];
+  const others = remote.results.filter((r) => !isMine(r));
   const searching = remote.status === 'loading' && Boolean(projectSearchJql(cfg, term));
+  const failed = remote.status === 'error';
   return [
     ...(mine.length ? [separator(`── suas atividades (${mine.length})`), ...issueChoices(mine, branchKey, lastKey)] : []),
     ...(searching ? [separator('── buscando no projeto…')] : []),
+    ...(failed ? [separator('── não consegui buscar no projeto')] : []),
     ...(others.length ? [separator(`── outras no projeto (${others.length})`), ...issueChoices(others)] : []),
-    ...(!mine.length && !others.length && !searching ? [new Separator(c.dim(' Nenhuma atividade encontrada'))] : []),
+    ...(!mine.length && !others.length && !searching && !failed
+      ? [new Separator(c.dim(' Nenhuma atividade encontrada'))]
+      : []),
     separator('── ações'),
     ...actions,
   ];
@@ -296,10 +303,8 @@ export function projectSearchJql(cfg, term) {
   const t = term.trim();
   const key = t.toUpperCase().match(new RegExp(`^(?:${cfg.projectKey}-)?(\\d+)$`));
   if (key) return `key = ${cfg.projectKey}-${key[1]}`;
-  const words = t
-    .split(/\s+/)
-    .map((w) => w.replace(/[^\p{L}\p{N}]/gu, ''))
-    .filter((w) => w.length >= 2);
+  // a pontuação separa palavras ("README.md" → README, md): apagá-la colaria tudo em "READMEmd"
+  const words = t.split(/[^\p{L}\p{N}]+/u).filter((w) => w.length >= 2);
   if (!words.length) return null;
   const title = words.map((w) => `summary ~ "${w}*"`).join(' AND ');
   return `project = ${cfg.projectKey} AND statusCategory != Done AND ${title} ORDER BY updated DESC`;

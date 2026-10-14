@@ -297,6 +297,9 @@ sem querer não cria nada.
   em qualquer status. Elas aparecem embaixo quando a busca termina ("buscando no projeto…"
   enquanto isso). Um número sozinho (`2375`) ou a chave (`ABDP-2375`) acha a atividade
   direto, mesmo concluída.
+  Pontuação separa palavras: `README.md` procura "README" e "md", e `jira-commit-cli`
+  procura "jira", "commit" e "cli". Se o Jira não responder, aparece "não consegui buscar no
+  projeto", e as suas atividades continuam filtradas normalmente.
 - As **ações** ficam no fim da lista. Sem resultado, o cursor cai em **+ Criar nova
   atividade**. Para voltar ao menu completo, apague o que digitou.
 
