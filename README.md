@@ -5,12 +5,15 @@ atividades em árvore (tarefas com as subtarefas embaixo) para você escolher, o
 nova na hora, inclusive como subtarefa, a partir do commit.
 
 ```text
-? Qual atividade do Jira é esse commit?
-  ＋ Criar nova atividade a partir deste commit
-  ⋯ Ver tasks de outros status
-  ✎ Digitar a chave manualmente
-  ↷ Pular (commit sem tag)
+◆ jira-commit  LOJA · develop
+│ feat(home): adiciona card de benefício
 
+◆ Qual atividade é esse commit?
+  + Criar nova atividade
+  ⋯ Ver outros status
+  ✎ Digitar a chave
+  ↷ Pular
+ ── suas atividades (31) ─────────────────
 ❯ LOJA-2375  LOJA DO BAIRRO | Mobile - Benefícios: Criar tela de…  Tarefas pendentes
   ├─ LOJA-2415  LOJA DO BAIRRO | Mobile: Criar testes E2E com Mae…  Tarefas pendentes
   └─ LOJA-2413  LOJA DO BAIRRO | Mobile: Exibir os estados de car…  Tarefas pendentes

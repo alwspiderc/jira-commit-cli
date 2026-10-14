@@ -27,6 +27,7 @@ jira-commit-cli/
 │  ├─ jira.js               Cliente da API REST v3 do Jira
 │  ├─ git.js                Raiz do repo, branch, arquivos e diff do stage
 │  ├─ tree.js               Agrupa subtarefas sob o pai e desenha as linhas
+│  ├─ ui.js                 Identidade visual: cores, ícones, tema dos prompts, spinner, cartão
 │  ├─ adf.js                Monta a descrição em Atlassian Document Format
 │  └─ ai.js                 Sugestão de título via Claude (opcional)
 └─ docs/
@@ -49,7 +50,7 @@ git commit
             │     ├─ ⋯ outros status → busca de novo com { all: true }
             │     ├─ ✎ manual → input validado pelo regex da chave
             │     ├─ ↷ pular → sai sem mexer
-            │     └─ ＋ criar → createFromCommit()  ─┤
+            │     └─ + criar → createFromCommit()  ─┤
             │                                       ▼
             └─ 1ª linha = format com {key} {message} {prefix} {subject}
                → grava o arquivo → git usa a mensagem nova → commit-msg (commitlint)
