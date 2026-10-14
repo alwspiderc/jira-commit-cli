@@ -18,9 +18,9 @@ import {
 import { currentBranch, stagedFiles, stagedDiff, recentSubjects } from '../git.js';
 import { commitDescription } from '../adf.js';
 import { suggestTitle, suggestSubject, aiEnabled } from '../ai.js';
-import { askCommit, askDetails, detailLines } from '../message.js';
+import { askCommit, askDetails, detailLines, normalize } from '../message.js';
 import { buildTree, treeLines } from '../tree.js';
-import { select, input, confirm, Separator, c, icon, log, header, withSpinner, card } from '../ui.js';
+import { select, searchSelect, input, confirm, Separator, c, icon, log, header, withSpinner, card } from '../ui.js';
 
 const OTHER_STATUSES = '__other__';
 const NEW = '__new__';
@@ -159,6 +159,7 @@ async function chooseIssue(cfg, commit, keyRegex, branch, prefetch) {
   // senão, a do último commit nesta branch (commits seguidos costumam ser da mesma atividade)
   const branchKey = branch.match(keyRegex)?.[0];
   const lastKey = getRepoState().lastIssueByBranch?.[branch];
+  const found = new Map(); // atividades achadas na busca do projeto, para o título no fim
   let all = false;
   let choice;
   let issues = null;
@@ -185,51 +186,61 @@ async function chooseIssue(cfg, commit, keyRegex, branch, prefetch) {
     const keys = new Set([...lastChoice, ...taskChoices].map((ch) => ch.value).filter(Boolean));
     const hasDetails = Boolean(commit.details.body || commit.details.breaking);
 
-    choice = await select({
-      message: all
-        ? `Qual atividade é esse commit? ${c.dim('· todos os status')}`
-        : 'Qual atividade é esse commit?',
+    const actions = [
+      {
+        name: c.ok('+ Criar nova atividade'),
+        short: 'Criar nova atividade',
+        value: NEW,
+        description: 'Cria uma tarefa ou subtarefa no Jira a partir deste commit e já vincula',
+      },
+      all
+        ? { name: c.warn('← Voltar aos status padrão'), short: 'Status padrão', value: OTHER_STATUSES }
+        : {
+            name: c.warn('⋯ Ver outros status'),
+            short: 'Outros status',
+            value: OTHER_STATUSES,
+            description: 'Mostra todas as suas atividades abertas, não só as dos status padrão',
+          },
+      {
+        name: c.accent('✎ Digitar a chave'),
+        short: 'Digitar a chave',
+        value: MANUAL,
+        description: 'Para uma atividade que não é sua ou não aparece na lista',
+      },
+      {
+        name: c.accent(`¶ ${hasDetails ? 'Editar' : 'Adicionar'} corpo / BREAKING CHANGE`),
+        short: 'Corpo / BREAKING CHANGE',
+        value: DETAILS,
+        description: 'Texto mais longo e quebra de compatibilidade, os dois opcionais. Depois volta para esta lista',
+      },
+      {
+        name: c.dim('↷ Pular'),
+        short: 'Pular',
+        value: SKIP,
+        description: 'Commita sem chave do Jira',
+      },
+    ];
+    const listed = issues; // valor fixo para as funções do prompt ("issues" muda no "outros status")
+
+    choice = await searchSelect({
+      message: `Qual atividade é esse commit? ${c.dim(`${all ? '· todos os status ' : ''}· digite para buscar`)}`,
       pageSize: 15,
-      loop: false, // para no fim da lista em vez de voltar ao começo
       // cursor começa na task da branch, na última usada ou na primeira task, nunca numa ação
       default: [branchKey, lastKey].find((k) => keys.has(k)) ?? taskChoices.find((ch) => ch.value)?.value,
-      choices: [
-        {
-          name: c.ok('+ Criar nova atividade'),
-          short: 'Criar nova atividade',
-          value: NEW,
-          description: 'Cria uma tarefa ou subtarefa no Jira a partir deste commit e já vincula',
-        },
-        all
-          ? { name: c.warn('← Voltar aos status padrão'), short: 'Status padrão', value: OTHER_STATUSES }
-          : {
-              name: c.warn('⋯ Ver outros status'),
-              short: 'Outros status',
-              value: OTHER_STATUSES,
-              description: 'Mostra todas as suas atividades abertas, não só as dos status padrão',
-            },
-        {
-          name: c.accent('✎ Digitar a chave'),
-          short: 'Digitar a chave',
-          value: MANUAL,
-          description: 'Para uma atividade que não é sua ou não aparece na lista',
-        },
-        {
-          name: c.accent(`¶ ${hasDetails ? 'Editar' : 'Adicionar'} corpo / BREAKING CHANGE`),
-          short: 'Corpo / BREAKING CHANGE',
-          value: DETAILS,
-          description: 'Texto mais longo e quebra de compatibilidade, os dois opcionais. Depois volta para esta lista',
-        },
-        {
-          name: c.dim('↷ Pular'),
-          short: 'Pular',
-          value: SKIP,
-          description: 'Commita sem chave do Jira',
-        },
-        new Separator(c.dim(`── ${all ? 'todas as abertas' : 'suas atividades'} (${issues.length}) `.padEnd(40, '─'))),
-        ...lastChoice,
-        ...taskChoices,
-      ],
+      items: (term, remote) =>
+        term
+          ? searchResults(term, remote, { cfg, issues: listed, branchKey, lastKey, actions })
+          : [
+              ...actions,
+              separator(`── ${all ? 'todas as abertas' : 'suas atividades'} (${listed.length})`),
+              ...lastChoice,
+              ...taskChoices,
+            ],
+      remote: async (term) => {
+        const results = await searchProject(cfg, term);
+        results.forEach((i) => found.set(i.key, i));
+        return results;
+      },
     });
     if (choice === OTHER_STATUSES) {
       all = !all;
@@ -244,7 +255,59 @@ async function chooseIssue(cfg, commit, keyRegex, branch, prefetch) {
   if (choice === SKIP) return null;
   if (choice === MANUAL) return manualKey(cfg, keyRegex);
   if (choice === NEW) return createFromCommit(cfg, commit, issues, keyRegex);
-  return { key: choice, title: issues.find((i) => i.key === choice)?.summary };
+  return { key: choice, title: (issues.find((i) => i.key === choice) ?? found.get(choice))?.summary };
+}
+
+const separator = (label) => new Separator(c.dim(`${label} `.padEnd(40, '─')));
+
+/**
+ * Menu com termo digitado: as suas atividades que batem, as outras do projeto (quando a busca
+ * no Jira chega) e as ações no fim, para o cursor cair numa atividade e não numa ação.
+ */
+function searchResults(term, remote, { cfg, issues, branchKey, lastKey, actions }) {
+  const mine = matchIssues(issues, term);
+  const others = remote.results.filter((r) => !issues.some((i) => i.key === r.key));
+  const searching = remote.status === 'loading' && Boolean(projectSearchJql(cfg, term));
+  return [
+    ...(mine.length ? [separator(`── suas atividades (${mine.length})`), ...issueChoices(mine, branchKey, lastKey)] : []),
+    ...(searching ? [separator('── buscando no projeto…')] : []),
+    ...(others.length ? [separator(`── outras no projeto (${others.length})`), ...issueChoices(others)] : []),
+    ...(!mine.length && !others.length && !searching ? [new Separator(c.dim(' Nenhuma atividade encontrada'))] : []),
+    separator('── ações'),
+    ...actions,
+  ];
+}
+
+/** Suas atividades cujo título ou chave têm todas as palavras digitadas (sem acento e sem maiúscula). */
+export function matchIssues(issues, term) {
+  const words = normalize(term).split(/\s+/).filter(Boolean);
+  return issues.filter((i) => {
+    const text = normalize(`${i.key} ${i.summary}`);
+    return words.every((w) => text.includes(w));
+  });
+}
+
+/**
+ * JQL da busca no projeto inteiro (qualquer responsável, só abertas): pela chave ("ABDP-12" ou
+ * "12") ou por palavras do título, cada uma como prefixo. null quando não há o que buscar.
+ * No Jira, os acentos contam: "benef" e "benefício" acham, "beneficio" não.
+ */
+export function projectSearchJql(cfg, term) {
+  const t = term.trim();
+  const key = t.toUpperCase().match(new RegExp(`^(?:${cfg.projectKey}-)?(\\d+)$`));
+  if (key) return `key = ${cfg.projectKey}-${key[1]}`;
+  const words = t
+    .split(/\s+/)
+    .map((w) => w.replace(/[^\p{L}\p{N}]/gu, ''))
+    .filter((w) => w.length >= 2);
+  if (!words.length) return null;
+  const title = words.map((w) => `summary ~ "${w}*"`).join(' AND ');
+  return `project = ${cfg.projectKey} AND statusCategory != Done AND ${title} ORDER BY updated DESC`;
+}
+
+async function searchProject(cfg, term) {
+  const jql = projectSearchJql(cfg, term);
+  return jql ? searchIssues(jql, cfg.maxResults) : [];
 }
 
 /** Tarefas com as subtarefas penduradas embaixo; a família da branch vem primeiro. */
