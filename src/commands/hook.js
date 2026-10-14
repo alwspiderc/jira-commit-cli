@@ -1,7 +1,5 @@
 import { readFileSync, writeFileSync } from 'node:fs';
-import { styleText } from 'node:util';
-import { select, input, confirm, Separator } from '@inquirer/prompts';
-import { loadProjectConfig, buildJql, getRepoState, setRepoState } from '../config.js';
+import { loadProjectConfig, loadCredentials, buildJql, getRepoState, setRepoState } from '../config.js';
 import {
   searchIssues,
   createIssue,
@@ -14,6 +12,7 @@ import { currentBranch, stagedFiles, stagedDiff } from '../git.js';
 import { commitDescription } from '../adf.js';
 import { suggestTitle, aiEnabled } from '../ai.js';
 import { buildTree, treeLines } from '../tree.js';
+import { select, input, confirm, Separator, c, icon, log, header, withSpinner, card } from '../ui.js';
 
 const OTHER_STATUSES = '__other__';
 const NEW = '__new__';
@@ -39,18 +38,48 @@ export async function hook(msgFile, source) {
   if (keyRegex.test(firstLine)) return; // já tem a tag, nada a fazer
 
   const { prefix, subject } = splitConventional(firstLine);
+  const branch = currentBranch();
+  header(`${cfg.projectKey} · ${branch}`, firstLine ? c.accent(firstLine) : c.dim('(mensagem vazia)'));
 
   const body = commitBody(lines);
-  const key = await chooseIssue(cfg, { subject, body }, keyRegex);
-  if (!key) return; // pessoa escolheu pular
+  const result = await chooseIssue(cfg, { subject, body }, keyRegex, branch);
+  if (!result) {
+    log.hint('Commit seguirá sem chave do Jira.');
+    console.log();
+    return;
+  }
 
   lines[0] = cfg.format
-    .replace('{key}', key)
+    .replace('{key}', result.key)
     .replace('{message}', firstLine)
     .replace('{prefix}', prefix)
     .replace('{subject}', subject);
   writeFileSync(msgFile, lines.join('\n'));
-  console.log(`✔ Commit vinculado a ${key}`);
+
+  summaryCard(result, lines[0]);
+}
+
+/** Cartão final: atividade, o que foi criado/movido, a mensagem nova e o link. */
+function summaryCard({ key, title, created, parentKey, movedTo }, message) {
+  let link;
+  try {
+    link = `${loadCredentials().baseUrl}/browse/${key}`;
+  } catch {
+    // sem credenciais não há link; o resto do cartão segue
+  }
+
+  const details = [
+    created && (parentKey ? `nova subtarefa de ${c.key(parentKey)}` : 'nova atividade'),
+    movedTo && `status ${c.accent(movedTo)}`,
+  ].filter(Boolean);
+
+  card(created ? `${icon.ok} Atividade criada e vinculada` : `${icon.ok} Commit vinculado`, [
+    `${c.key(key)}  ${title ?? ''}`,
+    ...(details.length ? [c.dim(details.join('  ·  '))] : []),
+    '',
+    c.dim(message),
+    ...(link ? [`${icon.link} ${c.dim(link)}`] : []),
+  ]);
 }
 
 /**
@@ -72,39 +101,63 @@ export function commitBody(lines) {
   return out.join('\n').trim();
 }
 
-async function chooseIssue(cfg, commit, keyRegex) {
+/** Devolve { key, title, created?, parentKey?, movedTo? } ou null para pular. */
+async function chooseIssue(cfg, commit, keyRegex, branch) {
   // Se a branch tiver uma chave (ex.: feature/PROJ-42-login), ela vem primeiro
-  const branchKey = currentBranch().match(keyRegex)?.[0];
+  const branchKey = branch.match(keyRegex)?.[0];
   let all = false;
   let choice;
   let issues = [];
 
   do {
     try {
-      issues = await searchIssues(await buildJql(cfg, { all }), cfg.maxResults);
+      issues = await withSpinner(
+        all ? 'Buscando todas as suas atividades abertas…' : 'Buscando suas atividades no Jira…',
+        async () => searchIssues(await buildJql(cfg, { all }), cfg.maxResults),
+      );
     } catch (err) {
-      console.warn(`⚠ Não consegui falar com o Jira (${err.message}).`);
-      return manualKey(cfg, keyRegex);
+      log.warn(`Não consegui falar com o Jira (${err.message}).`);
+      return manualKey(cfg, keyRegex, { offline: true });
     }
     const taskChoices = issueChoices(issues, branchKey);
-    const firstTask = taskChoices.find((c) => c.value)?.value;
+    const firstTask = taskChoices.find((ch) => ch.value)?.value;
 
     choice = await select({
       message: all
-        ? 'Qual atividade do Jira é esse commit? ' + style('dim', '(todos os status)')
-        : 'Qual atividade do Jira é esse commit?',
+        ? `Qual atividade é esse commit? ${c.dim('· todos os status')}`
+        : 'Qual atividade é esse commit?',
       pageSize: 15,
       loop: false, // para no fim da lista em vez de voltar ao começo
       // cursor começa na task da branch ou na primeira task, nunca numa ação
       default: issues.some((i) => i.key === branchKey) ? branchKey : firstTask,
       choices: [
-        { name: style('green', '＋ Criar nova atividade a partir deste commit'), value: NEW },
+        {
+          name: c.ok('+ Criar nova atividade'),
+          short: 'Criar nova atividade',
+          value: NEW,
+          description: 'Cria uma tarefa ou subtarefa no Jira a partir deste commit e já vincula',
+        },
         all
-          ? { name: style('yellow', '← Voltar aos status padrão'), value: OTHER_STATUSES }
-          : { name: style('yellow', '⋯ Ver tasks de outros status'), value: OTHER_STATUSES },
-        { name: style('blue', '✎ Digitar a chave manualmente'), value: MANUAL },
-        { name: style('gray', '↷ Pular (commit sem tag)'), value: SKIP },
-        new Separator(' '),
+          ? { name: c.warn('← Voltar aos status padrão'), short: 'Status padrão', value: OTHER_STATUSES }
+          : {
+              name: c.warn('⋯ Ver outros status'),
+              short: 'Outros status',
+              value: OTHER_STATUSES,
+              description: 'Mostra todas as suas atividades abertas, não só as dos status padrão',
+            },
+        {
+          name: c.accent('✎ Digitar a chave'),
+          short: 'Digitar a chave',
+          value: MANUAL,
+          description: 'Para uma atividade que não é sua ou não aparece na lista',
+        },
+        {
+          name: c.dim('↷ Pular'),
+          short: 'Pular',
+          value: SKIP,
+          description: 'Commita sem chave do Jira',
+        },
+        new Separator(c.dim(`── ${all ? 'todas as abertas' : 'suas atividades'} (${issues.length}) `.padEnd(40, '─'))),
         ...taskChoices,
       ],
     });
@@ -114,19 +167,29 @@ async function chooseIssue(cfg, commit, keyRegex) {
   if (choice === SKIP) return null;
   if (choice === MANUAL) return manualKey(cfg, keyRegex);
   if (choice === NEW) return createFromCommit(cfg, commit, issues, keyRegex);
-  return choice;
+  return { key: choice, title: issues.find((i) => i.key === choice)?.summary };
 }
-
-const style = (format, text) => styleText(format, text);
 
 /** Tarefas com as subtarefas penduradas embaixo; a família da branch vem primeiro. */
 export function issueChoices(issues, branchKey) {
-  if (!issues.length) return [new Separator(style('dim', ' Nenhuma task encontrada'))];
+  if (!issues.length) return [new Separator(c.dim(' Nenhuma atividade encontrada nesses status'))];
 
   // o select põe "❯ " antes das opções e só " " antes dos separadores
   return treeLines(buildTree(issues, branchKey), { gutter: 2 }).map((l) =>
-    l.selectable ? { name: l.text, value: l.issue.key } : new Separator(' ' + l.text),
+    l.selectable
+      ? {
+          name: l.text,
+          value: l.issue.key,
+          short: `${l.issue.key}  ${truncate(l.issue.summary, 60)}`,
+          // título completo embaixo da lista, já que na linha ele é cortado
+          description: `${l.issue.summary}  ·  ${l.issue.status}`,
+        }
+      : new Separator(' ' + l.text),
   );
+}
+
+function truncate(text, max) {
+  return text.length > max ? text.slice(0, max - 1) + '…' : text;
 }
 
 const SUBTASK = '__subtask__';
@@ -136,32 +199,36 @@ async function createFromCommit(cfg, commit, issues, keyRegex) {
   const kind = await select({
     message: 'Que tipo de atividade?',
     choices: [
-      { name: '↳ Subtarefa de uma tarefa existente', value: SUBTASK },
-      { name: `▣ ${cfg.issueType} (tarefa sem pai)`, value: TASK },
+      {
+        name: '↳ Subtarefa',
+        value: SUBTASK,
+        description: 'Fica embaixo de uma tarefa existente e herda sprint, labels e componentes',
+      },
+      { name: `▣ ${cfg.issueType}`, value: TASK, description: 'Tarefa nova, sem pai' },
     ],
   });
 
   let parent = null;
   if (kind === SUBTASK) {
-    const parentKey = await chooseParent(issues, keyRegex, cfg);
-    if (!parentKey) return null;
-    parent = await getIssue(parentKey);
+    const chosen = await chooseParent(issues, keyRegex, cfg);
+    if (!chosen) return null;
+    parent = await withSpinner(`Carregando ${chosen.key}…`, () => getIssue(chosen.key));
   }
 
   // Título: prefixo do produto + sugestão da IA (ou o texto do commit), tudo editável
   const files = stagedFiles();
-  if (aiEnabled(cfg)) console.log(style('dim', '  … pedindo sugestão de título à IA'));
-  const suggestion = await suggestTitle(cfg, {
-    diff: stagedDiff(),
-    files,
-    subject: commit.subject,
-    parentSummary: parent?.summary,
-  });
+  const suggestion = aiEnabled(cfg)
+    ? await withSpinner(
+        'Pedindo uma sugestão de título à IA…',
+        () => suggestTitle(cfg, { diff: stagedDiff(), files, subject: commit.subject, parentSummary: parent?.summary }),
+        { done: (s) => (s ? c.dim('Sugestão da IA pronta') : c.dim('Sem sugestão da IA, usando o commit')) },
+      )
+    : null;
   const prefix = resolvePrefix(cfg.summaryPrefix, parent ? productOf(parent.summary) : mostCommonProduct(issues));
 
   const summary = (
     await input({
-      message: suggestion ? 'Título (sugerido pela IA):' : 'Título da nova atividade:',
+      message: suggestion ? `Título ${c.dim('· sugerido pela IA')}` : 'Título',
       default: prefix + (suggestion ?? commit.subject),
       prefill: 'editable',
       validate: (v) => v.trim().length > 0 || 'O título não pode ficar vazio',
@@ -169,37 +236,44 @@ async function createFromCommit(cfg, commit, issues, keyRegex) {
   ).trim();
 
   const issueType = parent ? await subtaskTypeName(cfg) : cfg.issueType;
-  const where = parent ? `subtarefa de ${parent.key}` : `${issueType} em ${cfg.projectKey}`;
-  const ok = await confirm({ message: `Criar ${where}: "${summary}"?`, default: true });
+  const where = parent ? `subtarefa de ${c.key(parent.key)}` : `${issueType} em ${c.key(cfg.projectKey)}`;
+  const ok = await confirm({ message: `Criar ${where}?`, default: true });
   if (!ok) return null;
 
-  const key = await createIssue({
-    projectKey: cfg.projectKey,
-    summary,
-    issueType,
-    parentKey: parent?.key,
-    description: commitDescription({ body: commit.body, files }),
-    // o sprint o Jira herda do pai sozinho; labels e componentes, não
-    labels: parent?.labels,
-    components: parent?.components,
-  });
-  console.log(style('green', `✔ ${key} criada no Jira`) + (parent ? style('dim', ` (subtarefa de ${parent.key})`) : ''));
+  const key = await withSpinner(
+    'Criando no Jira…',
+    () =>
+      createIssue({
+        projectKey: cfg.projectKey,
+        summary,
+        issueType,
+        parentKey: parent?.key,
+        description: commitDescription({ body: commit.body, files }),
+        // o sprint o Jira herda do pai sozinho; labels e componentes, não
+        labels: parent?.labels,
+        components: parent?.components,
+      }),
+    { done: (k) => `${c.key(k)} criada no Jira` },
+  );
   if (parent) setRepoState({ lastParent: parent.key });
 
-  await chooseInitialStatus(key);
-  return key;
+  const movedTo = await chooseInitialStatus(key);
+  return { key, title: summary, created: true, parentKey: parent?.key, movedTo };
 }
 
 /** Pai da subtarefa: as tarefas da árvore atual, com a última usada pré-selecionada. */
 async function chooseParent(issues, keyRegex, cfg) {
   const roots = buildTree(issues).map((f) => f.root);
   const { lastParent } = getRepoState();
+  const lastTag = c.ok('  ★ última usada');
   const choices = roots.map((r) => ({
-    name: `${style(['bold', 'cyan'], r.key)}  ${r.summary}${r.key === lastParent ? style('dim', '  (última usada)') : ''}`,
+    name: `${c.key(r.key)}  ${truncate(r.summary, 70)}${r.key === lastParent ? lastTag : ''}`,
+    short: `${r.key}  ${truncate(r.summary, 60)}`,
     value: r.key,
+    description: r.summary,
   }));
   if (lastParent && !roots.some((r) => r.key === lastParent)) {
-    choices.unshift({ name: `${style(['bold', 'cyan'], lastParent)}  ${style('dim', '(última usada)')}`, value: lastParent });
+    choices.unshift({ name: `${c.key(lastParent)}${lastTag}`, short: lastParent, value: lastParent });
   }
 
   const choice = await select({
@@ -208,37 +282,44 @@ async function chooseParent(issues, keyRegex, cfg) {
     loop: false,
     default: lastParent,
     choices: [
-      { name: style('blue', '✎ Digitar a chave da tarefa pai'), value: MANUAL },
-      new Separator(' '),
+      { name: c.accent('✎ Digitar a chave da tarefa pai'), short: 'Digitar a chave', value: MANUAL },
+      new Separator(c.dim(`── tarefas (${choices.length}) `.padEnd(40, '─'))),
       ...choices,
     ],
   });
-  return choice === MANUAL ? manualKey(cfg, keyRegex) : choice;
+  return choice === MANUAL ? manualKey(cfg, keyRegex) : { key: choice };
 }
 
-/** Status inicial: "manter" ou qualquer transição que o workflow permitir. */
+/** Status inicial: "manter" ou qualquer transição que o workflow permitir. Devolve o novo status. */
 async function chooseInitialStatus(key) {
   let transitions = [];
   let current;
   try {
     [transitions, { status: current }] = await Promise.all([getTransitions(key), getIssue(key)]);
   } catch {
-    return; // a issue já existe; status é detalhe, não trava o commit
+    return null; // a issue já existe; status é detalhe, não trava o commit
   }
 
   const choice = await select({
-    message: `Status de ${key}:`,
+    message: `Status de ${c.key(key)}`,
     choices: [
-      { name: `Manter em ${current}`, value: null },
-      ...transitions.filter((t) => t.to !== current).map((t) => ({ name: `→ ${t.to}`, value: t.id })),
+      { name: `● Manter em ${c.accent(current)}`, short: `Manter em ${current}`, value: null },
+      ...transitions
+        .filter((t) => t.to !== current)
+        .map((t) => ({ name: `→ ${t.to}`, short: t.to, value: t.id })),
     ],
   });
-  if (!choice) return;
+  if (!choice) return null;
+
+  const to = transitions.find((t) => t.id === choice).to;
   try {
-    await transitionIssue(key, choice);
-    console.log(style('green', `✔ ${key} movida para ${transitions.find((t) => t.id === choice).to}`));
+    await withSpinner(`Movendo para ${to}…`, () => transitionIssue(key, choice), {
+      done: `${c.key(key)} movida para ${c.accent(to)}`,
+    });
+    return to;
   } catch (err) {
-    console.warn(`⚠ Não consegui mudar o status (${err.message}).`);
+    log.warn(`Não consegui mudar o status (${err.message}).`);
+    return null;
   }
 }
 
@@ -274,10 +355,26 @@ export function mostCommonProduct(issues) {
   return best?.[0] ?? '';
 }
 
-async function manualKey(cfg, keyRegex) {
+/**
+ * Pede a chave e confere no Jira se ela existe. Com o Jira fora do ar (offline),
+ * aceita qualquer chave no formato certo para não travar o commit.
+ */
+async function manualKey(cfg, keyRegex, { offline = false } = {}) {
+  let title;
   const key = await input({
-    message: `Chave da atividade (ex.: ${cfg.projectKey}-123), vazio pra pular:`,
-    validate: (v) => !v || keyRegex.test(v.toUpperCase()) || 'Formato inválido',
+    message: `Chave da atividade ${c.dim(`· ex.: ${cfg.projectKey}-123, vazio para pular`)}`,
+    validate: async (v) => {
+      if (!v) return true;
+      if (!keyRegex.test(v.toUpperCase())) return `Formato inválido, use ${cfg.projectKey}-123`;
+      if (offline) return true;
+      try {
+        title = (await getIssue(v.toUpperCase())).summary;
+        return true;
+      } catch (err) {
+        if (/respondeu 404/.test(err.message)) return `${v.toUpperCase()} não existe no Jira`;
+        return true; // erro de rede: aceita a chave mesmo sem confirmar
+      }
+    },
   });
-  return key ? key.toUpperCase() : null;
+  return key ? { key: key.toUpperCase(), title } : null;
 }
