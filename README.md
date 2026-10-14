@@ -5,12 +5,15 @@ atividades em árvore (tarefas com as subtarefas embaixo) para você escolher, o
 nova na hora, inclusive como subtarefa, a partir do commit.
 
 ```text
-? Qual atividade do Jira é esse commit?
-  ＋ Criar nova atividade a partir deste commit
-  ⋯ Ver tasks de outros status
-  ✎ Digitar a chave manualmente
-  ↷ Pular (commit sem tag)
+◆ jira-commit  ABDP · develop
+│ feat(home): adiciona card de benefício
 
+◆ Qual atividade é esse commit?
+  + Criar nova atividade
+  ⋯ Ver outros status
+  ✎ Digitar a chave
+  ↷ Pular
+ ── suas atividades (31) ─────────────────
 ❯ ABDP-2375  TÁTICO CIDADÃO | Mobile - Benefícios: Criar tela de…  Tarefas pendentes
   ├─ ABDP-2415  TÁTICO CIDADÃO | Mobile: Criar testes E2E com Mae…  Tarefas pendentes
   └─ ABDP-2413  TÁTICO CIDADÃO | Mobile: Exibir os estados de car…  Tarefas pendentes

@@ -176,17 +176,26 @@ git commit            # ou: npm run commit, se o projeto usa cz
 O menu tem duas partes: **ações** no topo e **atividades** em árvore embaixo.
 
 ```text
-? Qual atividade do Jira é esse commit?
-  ＋ Criar nova atividade a partir deste commit
-  ⋯ Ver tasks de outros status
-  ✎ Digitar a chave manualmente
-  ↷ Pular (commit sem tag)
+◆ jira-commit  ABDP · develop
+│ feat(home): adiciona card de benefício
 
+◆ Qual atividade é esse commit?
+  + Criar nova atividade
+  ⋯ Ver outros status
+  ✎ Digitar a chave
+  ↷ Pular
+ ── suas atividades (31) ─────────────────
 ❯ ABDP-2375  TÁTICO CIDADÃO | Mobile - Benefícios: Criar tela de…  Tarefas pendentes
   ├─ ABDP-2415  TÁTICO CIDADÃO | Mobile: Criar testes E2E com Mae…  Tarefas pendentes
   └─ ABDP-2413  TÁTICO CIDADÃO | Mobile: Exibir os estados de car…  Tarefas pendentes
   ABDP-2416  TÁTICO CIDADÃO | Tema Mobile - Tirar o dark mode do…   Tarefas pendentes
+  TÁTICO CIDADÃO | Mobile - Benefícios: Criar tela de benefícios quando cidadão tem mais…  ·  Tarefas pendentes
+  ↑↓ navegar  ·  ⏎ escolher
 ```
+
+Logo abaixo da lista aparecem o **título completo** da atividade destacada (na linha ele é
+cortado) e as teclas de navegação. Enquanto busca no Jira, um spinner mostra o que está
+acontecendo.
 
 | Elemento | Significado |
 |---|---|
@@ -202,7 +211,7 @@ sem querer não cria nada.
 
 **Quais atividades aparecem:** por padrão, só as **suas** (`assignee = você`) nos status
 configurados em `statuses`, por exemplo Em andamento, PARA CORRIGIR e Tarefas pendentes.
-Para ver as outras, escolha **⋯ Ver tasks de outros status**, e para voltar, **← Voltar aos
+Para ver as outras, escolha **⋯ Ver outros status**, e para voltar, **← Voltar aos
 status padrão**.
 
 **Branch com chave:** se a branch tiver uma chave no nome (ex.:
@@ -213,30 +222,31 @@ começa nela.
 
 | Ação | O que acontece |
 |---|---|
-| ＋ Criar nova atividade | Cria no Jira e já vincula ao commit ([seção 8](#8-criar-atividade-a-partir-do-commit)) |
-| ⋯ Ver tasks de outros status | Mostra todas as suas atividades abertas |
-| ✎ Digitar a chave manualmente | Para uma atividade que não é sua ou não aparece na lista |
+| + Criar nova atividade | Cria no Jira e já vincula ao commit ([seção 8](#8-criar-atividade-a-partir-do-commit)) |
+| ⋯ Ver outros status | Mostra todas as suas atividades abertas |
+| ✎ Digitar a chave | Para uma atividade que não é sua ou não aparece na lista. A CLI confere se a chave existe no Jira |
 | ↷ Pular | Commita sem chave (o commitlint/cz do projeto pode reclamar) |
 
 ## 8. Criar atividade a partir do commit
 
-Escolha **＋ Criar nova atividade a partir deste commit**.
+Escolha **+ Criar nova atividade**.
 
 **1. Tipo**
 
 ```text
-? Que tipo de atividade?
-❯ ↳ Subtarefa de uma tarefa existente
-  ▣ Mobile (tarefa sem pai)
+◆ Que tipo de atividade?
+❯ ↳ Subtarefa
+  ▣ Mobile
+  Fica embaixo de uma tarefa existente e herda sprint, labels e componentes
 ```
 
 **2. Tarefa pai** (só para subtarefa)
 
 ```text
-? Subtarefa de qual tarefa?
+◆ Subtarefa de qual tarefa?
   ✎ Digitar a chave da tarefa pai
-
-❯ ABDP-2375  TÁTICO CIDADÃO | Mobile - Benefícios: ...  (última usada)
+ ── tarefas (12) ─────────────────────────
+❯ ABDP-2375  TÁTICO CIDADÃO | Mobile - Benefícios: ...  ★ última usada
   ABDP-2373  TÁTICO CIDADÃO | Mobile - Tela Inicial: ...
 ```
 
@@ -249,7 +259,7 @@ O campo já vem **preenchido e editável**: prefixo + texto do commit (ou a suge
 [seção 9](#9-sugestão-de-título-por-ia)). Ajuste o que quiser e confirme com Enter.
 
 ```text
-? Título da nova atividade: TÁTICO CIDADÃO | Mobile: adiciona card de benefício▌
+◆ Título · sugerido pela IA  TÁTICO CIDADÃO | Mobile: Criar card de benefício na Home▌
 ```
 
 <a id="prefixo-do-título"></a>
@@ -267,15 +277,15 @@ Para uma **tarefa sem pai**, o `{product}` é o produto que mais aparece nas sua
 **4. Confirmação**
 
 ```text
-? Criar subtarefa de ABDP-2375: "TÁTICO CIDADÃO | Mobile: adiciona card de benefício"? (Y/n)
-✔ ABDP-2423 criada no Jira (subtarefa de ABDP-2375)
+◆ Criar subtarefa de ABDP-2375? (Y/n)
+✔ ABDP-2423 criada no Jira
 ```
 
 **5. Status inicial**
 
 ```text
-? Status de ABDP-2423:
-❯ Manter em Tarefas pendentes
+◆ Status de ABDP-2423
+❯ ● Manter em Tarefas pendentes
   → Em andamento
   → TESTANDO
   → PARA TECH LEAD
@@ -284,6 +294,23 @@ Para uma **tarefa sem pai**, o `{product}` é o produto que mais aparece nas sua
 
 As opções são as transições que o workflow do Jira permite a partir do status inicial.
 Se a mudança de status falhar, a atividade continua criada e o commit segue.
+
+**6. Resumo**
+
+No fim aparece um cartão com o que aconteceu e o link para abrir a atividade no Jira:
+
+```text
+╭─ ✔ Atividade criada e vinculada ───────────────────────────────────╮
+│ ABDP-2423  TÁTICO CIDADÃO | Mobile: Criar card de benefício na Home │
+│ nova subtarefa de ABDP-2375  ·  status Em andamento                 │
+│                                                                     │
+│ feat(home): ABDP-2423 adiciona card de benefício                    │
+│ ↗ https://ipq.atlassian.net/browse/ABDP-2423                        │
+╰─────────────────────────────────────────────────────────────────────╯
+```
+
+Quando você só escolhe uma atividade existente, o cartão é o **✔ Commit vinculado**, com a
+mensagem final e o link.
 
 **O que vai para o Jira:**
 
@@ -381,7 +408,7 @@ exatamente como aparece na lista do erro.
 
 **Aparecem poucas atividades / falta uma atividade**
 - A lista mostra só as **suas** atividades nos `statuses` configurados. Use
-  **⋯ Ver tasks de outros status** ou **✎ Digitar a chave**.
+  **⋯ Ver outros status** ou **✎ Digitar a chave**.
 - O limite é `maxResults` (padrão 20). Aumente no `.jira-commit.json`.
 
 **O commitlint rejeitou a mensagem depois do jira-commit**
