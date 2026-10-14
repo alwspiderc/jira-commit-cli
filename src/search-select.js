@@ -32,8 +32,8 @@ const selectable = (item) => item && !Separator.isSeparator(item) && !item.disab
 /**
  * config.items(term, remote) → lista de opções e Separators a mostrar.
  *   term: o que foi digitado ('' = lista inicial)
- *   remote: { status: 'idle' | 'loading' | 'done', results } da busca remota daquele termo
- * config.remote(term, { signal }) → Promise com os resultados remotos (opcional)
+ *   remote: { status: 'idle' | 'loading' | 'done' | 'error', results } da busca remota daquele termo
+ * config.remote(term, { signal }) → Promise com os resultados remotos (opcional; se rejeitar, status 'error')
  * config.default: valor em que o cursor começa quando não há termo
  */
 export default createPrompt((config, done) => {
@@ -51,13 +51,14 @@ export default createPrompt((config, done) => {
     if (!term || !config.remote) return undefined;
     const controller = new AbortController();
     const timer = setTimeout(async () => {
-      let results = [];
+      // busca remota é um extra: se falhar, fica a lista local e o status "error" para avisar
+      let next;
       try {
-        results = await config.remote(term, { signal: controller.signal });
+        next = { term, status: 'done', results: await config.remote(term, { signal: controller.signal }) };
       } catch {
-        // busca remota é um extra: se falhar, fica só a lista local
+        next = { term, status: 'error', results: [] };
       }
-      if (!controller.signal.aborted) setRemote({ term, status: 'done', results });
+      if (!controller.signal.aborted) setRemote(next);
     }, DEBOUNCE_MS);
     return () => {
       clearTimeout(timer);
