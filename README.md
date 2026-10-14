@@ -12,6 +12,7 @@ nova na hora, inclusive como subtarefa, a partir do commit.
   + Criar nova atividade
   ⋯ Ver outros status
   ✎ Digitar a chave
+  ¶ Adicionar corpo / BREAKING CHANGE
   ↷ Pular
  ── suas atividades (31) ─────────────────
 ❯ LOJA-2375  LOJA DO BAIRRO | Mobile - Benefícios: Criar tela de…  Tarefas pendentes
@@ -28,8 +29,8 @@ feat(home): adiciona card de benefício   →   feat(home): LOJA-2411 adiciona c
 ```bash
 npm i -D git+https://github.com/alwspiderc/jira-commit-cli.git   # no repositório
 npx jira-commit login     # uma vez por máquina: URL, e-mail e API token
-npx jira-commit init      # uma vez por repo: cria .jira-commit.json e instala o hook
-git commit                # pelo terminal, e o menu aparece
+npx jira-commit init      # uma vez por repo: cria .jira-commit.json, o hook e o npm run commit
+npm run commit            # pelo terminal: tipo, escopo, descrição e a atividade do Jira
 ```
 
 Commite o `.jira-commit.json` gerado: ele é a configuração do time.
@@ -44,7 +45,7 @@ Commite o `.jira-commit.json` gerado: ele é a configuração do time.
 | Comando | O que faz |
 |---|---|
 | `jira-commit login` | Salva e testa as credenciais do Jira |
-| `jira-commit init` | Configura o repositório e instala o hook `prepare-commit-msg` |
+| `jira-commit init` | Configura o repositório (importando tipos e escopos do `.cz-config.js`, se houver), instala o hook `prepare-commit-msg` e cria o `npm run commit` |
 | `jira-commit list` | Lista suas atividades nos status padrão |
 | `jira-commit list --todos` | Lista todas as suas atividades abertas |
 | `jira-commit list --status "NOME"` | Lista só um status |
@@ -52,6 +53,11 @@ Commite o `.jira-commit.json` gerado: ele é a configuração do time.
 
 ## Destaques
 
+- **Questionário do commit enxuto:** tipo, escopo (digite para filtrar) e descrição, com os
+  tipos e escopos no `.jira-commit.json`. Corpo e BREAKING CHANGE só quando precisar, e
+  `npm run commit` commita sem abrir o editor.
+- **Menos espera:** a busca no Jira e a sugestão de descrição por IA rodam enquanto você
+  responde, e o menu já começa na atividade do último commit da branch.
 - **Árvore de tarefas e subtarefas**, com o status colorido e a família da branch no topo.
 - **Filtro por status** com os nomes como aparecem na tela do Jira (traduzidos).
 - **Criação de subtarefa no commit:**
@@ -60,8 +66,10 @@ Commite o `.jira-commit.json` gerado: ele é a configuração do time.
   - preenche a descrição com o corpo do commit e os arquivos alterados;
   - herda labels, componentes e sprint do pai;
   - permite escolher o status inicial.
-- **Compatível com commitizen e commitlint:** a chave entra depois de `tipo(escopo):`.
-- **Sugestão de título por IA** (opcional), a partir do diff do stage.
+- **Compatível com commitlint:** a chave entra depois de `tipo(escopo):`, e o commitlint pode
+  ler os mesmos tipos e escopos do `.jira-commit.json`. O `init` migra projetos com commitizen.
+- **Sugestões por IA** (opcional), a partir do diff do stage: a descrição do commit e o título
+  da atividade criada.
 - **Não atrapalha:** pula merge, amend, mensagens que já têm a chave e commits por
   cliente gráfico.
 
