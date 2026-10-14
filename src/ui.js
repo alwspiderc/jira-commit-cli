@@ -51,6 +51,7 @@ export const select = themed(inquirer.select);
 export const input = themed(inquirer.input);
 export const confirm = themed(inquirer.confirm);
 export const password = themed(inquirer.password);
+export const search = themed(inquirer.search); // select com filtro: digitar "fe" acha "feat"
 export const { Separator } = inquirer;
 
 // ---------- Mensagens ----------

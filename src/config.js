@@ -113,6 +113,37 @@ async function statusIds(projectKey, names) {
   });
 }
 
+// ---------- Questionário do commit (seção "commit" do .jira-commit.json) ----------
+
+/** Tipos do Conventional Commits, para projetos que não trazem os seus. */
+export const CONVENTIONAL_TYPES = [
+  { value: 'feat', description: 'Nova funcionalidade' },
+  { value: 'fix', description: 'Correção de bug' },
+  { value: 'docs', description: 'Só documentação' },
+  { value: 'style', description: 'Formatação, sem mudar o código' },
+  { value: 'refactor', description: 'Refatoração, sem mudar o comportamento' },
+  { value: 'perf', description: 'Melhoria de performance' },
+  { value: 'test', description: 'Testes' },
+  { value: 'build', description: 'Build ou dependências' },
+  { value: 'ci', description: 'Configuração de CI' },
+  { value: 'chore', description: 'Manutenção' },
+  { value: 'revert', description: 'Reverte um commit' },
+];
+
+/**
+ * Seção "commit" normalizada: tipos sempre como { value, description }.
+ * null quando o projeto não usa o questionário (sem a seção, ou "commit": false).
+ */
+export function commitOptions(cfg) {
+  if (!cfg.commit) return null;
+  const { types = CONVENTIONAL_TYPES, scopes = [], headerMaxLength = 100 } = cfg.commit;
+  return {
+    types: types.map((t) => (typeof t === 'string' ? { value: t } : t)),
+    scopes,
+    headerMaxLength,
+  };
+}
+
 export function saveProjectConfig(cfg) {
   writeFileSync(join(repoRoot(), PROJECT_FILE), JSON.stringify(cfg, null, 2) + '\n');
 }
