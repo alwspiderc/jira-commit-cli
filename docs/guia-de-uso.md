@@ -343,7 +343,7 @@ Escolha **+ Criar nova atividade**.
   Fica embaixo de uma tarefa existente e herda sprint, labels e componentes
 ```
 
-**2. Tarefa pai** (só para subtarefa)
+**2. Tarefa pai** (subtarefa) **ou épico** (tarefa)
 
 ```text
 ◆ Subtarefa de qual tarefa?
@@ -355,6 +355,21 @@ Escolha **+ Criar nova atividade**.
 
 A **última tarefa pai usada neste repositório** já vem selecionada. Isso ajuda quando você
 cria várias subtarefas seguidas da mesma tarefa.
+
+Para uma tarefa, a pergunta é o **épico** (o "Pai" no Jira web), com busca por digitação:
+
+```text
+◆ Épico da tarefa · digite para buscar
+  — sem épico
+ ── épicos abertos (59) ─────────────────
+  ABDP-2392  PERMISSÃO
+❯ ABDP-232   MOBILE  ★ mais usado
+  ...
+```
+
+A sugestão é o **último épico usado neste repositório**. Na primeira vez, é o épico que mais
+aparece nas suas atividades. "— sem épico" também fica lembrado. Se o projeto não tiver
+épicos abertos, a pergunta não aparece.
 
 **3. Título**
 
@@ -395,7 +410,7 @@ tela de criação, e some com `"storyPoints": false` no `.jira-commit.json`.
 **5. Confirmação**
 
 ```text
-◆ Criar Mobile em ABDP na quadro Sprint 62? (Y/n)
+◆ Criar Mobile em ABDP no épico ABDP-232 na quadro Sprint 62? (Y/n)
 ✔ ABDP-2423 criada no Jira
 ✔ ABDP-2423 na quadro Sprint 62
 ```
@@ -448,7 +463,7 @@ mensagem final e o link.
 | Labels e componentes | Copiados da tarefa pai |
 | Sprint | Tarefa: a sprint ativa do quadro do projeto (sem sprint ativa, fica no backlog). Subtarefa: a da tarefa pai, pelo próprio Jira |
 | Story points | O que você escolheu no passo 4 (ou vazio) |
-| Épico (pai da tarefa) | Nenhum: a CLI não liga a tarefa a um épico. Se o time usa épicos, ligue no Jira web |
+| Épico (pai da tarefa) | O que você escolheu no passo 2 (ou nenhum). Subtarefa não tem épico: o pai dela é a tarefa |
 
 ## 9. Sugestão de título por IA
 

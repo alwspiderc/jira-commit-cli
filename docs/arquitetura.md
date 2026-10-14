@@ -74,6 +74,7 @@ tipo? ── subtarefa ── chooseParent() ── getIssue(pai)   (labels, com
           │
           ├─ stagedFiles() + stagedDiff() ── suggestTitle()   (null se IA desligada/falhou)
           ├─ resolvePrefix(summaryPrefix, productOf(pai) | mostCommonProduct(issues))
+          ├─ tarefa? ── chooseEpic()   (openEpics() + mostUsedEpic() começam antes da pergunta do tipo)
           ├─ (em paralelo) activeSprint() só p/ tarefa  +  storyPointsField(tipo)
           ├─ input(título, prefill editável) → askStoryPoints() → confirm
           ├─ createIssue({ parentKey, description: commitDescription(...), labels, components, storyPoints })
@@ -100,6 +101,8 @@ Todos ficam na API REST v3, com autenticação Basic (`email:token` em base64) e
 | `storyPointsField` | `GET /rest/api/3/issue/createmeta/{key}/issuetypes/{id}` | Acha o campo de estimativa da tela de criação do tipo |
 | `activeSprint` | `GET /rest/agile/1.0/board?projectKeyOrId={key}` e `GET /rest/agile/1.0/board/{id}/sprint?state=active` | Sprint ativa do primeiro quadro do projeto que tiver uma |
 | `moveToSprint` | `POST /rest/agile/1.0/sprint/{id}/issue` | Põe a tarefa nova na sprint ativa |
+| `openEpics` | `GET /rest/api/3/search/jql` (tipos com `hierarchyLevel` 1) | Épicos abertos para a pergunta do épico |
+| `mostUsedEpic` | `GET /rest/api/3/search/jql` (`parent` das suas atividades) | Épico sugerido na primeira vez |
 
 Campos pedidos na busca: `summary,status,issuetype,parent`. O `parent` só é considerado
 quando `issuetype.subtask` é verdadeiro. O pai de uma tarefa comum é o épico, que não
@@ -156,6 +159,10 @@ editor. É isso que o `npm run commit` usa.
 
 **Descrição em ADF.** A API v3 rejeita texto puro em `description`. O `adf.js` monta só o
 necessário: parágrafos, um título e uma lista com marcação de código.
+
+**Épico pelo nível da hierarquia.** O tipo épico se chama "Epic" numa instância e "Épico" em
+outra. Os tipos do projeto trazem `hierarchyLevel` (1 = épico), então `openEpics()` busca por
+esse nível. O épico vai no campo `parent` da tarefa, o mesmo que liga a subtarefa à tarefa.
 
 **Sprint pela API de sprints, depois de criar.** A subtarefa segue a sprint do pai sozinha.
 A tarefa sem pai, criada sem sprint, ficava só no backlog e não aparecia no quadro. Agora ela

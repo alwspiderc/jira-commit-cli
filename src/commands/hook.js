@@ -17,6 +17,8 @@ import {
   storyPointsField,
   activeSprint,
   moveToSprint,
+  openEpics,
+  mostUsedEpic,
 } from '../jira.js';
 import { currentBranch, stagedFiles, stagedDiff, recentSubjects } from '../git.js';
 import { commitDescription } from '../adf.js';
@@ -101,7 +103,7 @@ function prefetchIssues(cfg) {
 }
 
 /** Cartão final: atividade, o que foi criado/movido, a mensagem nova e o link. */
-function summaryCard({ key, title, created, parentKey, movedTo, sprint, points }, message) {
+function summaryCard({ key, title, created, parentKey, movedTo, epic, sprint, points }, message) {
   let link;
   try {
     link = `${loadCredentials().baseUrl}/browse/${key}`;
@@ -111,6 +113,7 @@ function summaryCard({ key, title, created, parentKey, movedTo, sprint, points }
 
   const details = [
     created && (parentKey ? `nova subtarefa de ${c.key(parentKey)}` : 'nova atividade'),
+    epic && `épico ${c.key(epic)}`,
     sprint && c.accent(sprint),
     points && `${points} pts`,
     movedTo && `status ${c.accent(movedTo)}`,
@@ -349,6 +352,8 @@ const SUBTASK = '__subtask__';
 const TASK = '__task__';
 
 async function createFromCommit(cfg, commit, issues, keyRegex) {
+  // épicos para a tarefa sem pai: a busca começa já, enquanto a pessoa escolhe o tipo
+  const epicsLookup = loadEpics(cfg).catch(() => null);
   const kind = await select({
     message: 'Que tipo de atividade?',
     choices: [
@@ -357,7 +362,7 @@ async function createFromCommit(cfg, commit, issues, keyRegex) {
         value: SUBTASK,
         description: 'Fica embaixo de uma tarefa existente e herda sprint, labels e componentes',
       },
-      { name: `▣ ${cfg.issueType}`, value: TASK, description: 'Tarefa nova, sem pai, já na sprint ativa' },
+      { name: `▣ ${cfg.issueType}`, value: TASK, description: 'Tarefa nova, num épico, já na sprint ativa' },
     ],
   });
 
@@ -367,6 +372,10 @@ async function createFromCommit(cfg, commit, issues, keyRegex) {
     if (!chosen) return null;
     parent = await withSpinner(`Carregando ${chosen.key}…`, () => getIssue(chosen.key));
   }
+
+  let epic = null;
+  const epics = kind === TASK ? await withSpinner('Buscando os épicos…', () => epicsLookup) : null;
+  if (epics) epic = await chooseEpic(epics);
 
   // Rodam enquanto a pessoa escreve o título. Tarefa sem pai vai para a sprint ativa (subtarefa já
   // segue a do pai); se a busca falhar, a tarefa só fica sem sprint, como antes.
@@ -403,7 +412,8 @@ async function createFromCommit(cfg, commit, issues, keyRegex) {
   const sprint = await sprintLookup;
   const where = parent
     ? `subtarefa de ${c.key(parent.key)}`
-    : `${issueType} em ${c.key(cfg.projectKey)}${sprint ? ` na ${c.accent(sprint.name)}` : ''}`;
+    : `${issueType} em ${c.key(cfg.projectKey)}${epic ? ` no épico ${c.key(epic.key)}` : ''}` +
+      (sprint ? ` na ${c.accent(sprint.name)}` : '');
   const ok = await confirm({ message: `Criar ${where}?`, default: true });
   if (!ok) return null;
 
@@ -415,6 +425,7 @@ async function createFromCommit(cfg, commit, issues, keyRegex) {
         summary,
         issueType,
         parentKey: parent?.key,
+        epicKey: epic?.key,
         // corpo que veio na mensagem + o que foi digitado no atalho de detalhes
         description: commitDescription({
           body: [detailLines(commit.details).join('\n').trim(), commit.body].filter(Boolean).join('\n\n'),
@@ -428,6 +439,7 @@ async function createFromCommit(cfg, commit, issues, keyRegex) {
     { done: (k) => `${c.key(k)} criada no Jira` },
   );
   if (parent) setRepoState({ lastParent: parent.key });
+  if (epics?.epics.length) setRepoState({ lastEpic: epic?.key ?? null }); // "sem épico" também é lembrado
 
   const inSprint = sprint && (await addToSprint(sprint, key));
   const movedTo = await chooseInitialStatus(key);
@@ -437,9 +449,46 @@ async function createFromCommit(cfg, commit, issues, keyRegex) {
     created: true,
     parentKey: parent?.key,
     movedTo,
+    epic: epic?.key,
     sprint: inSprint ? sprint.name : null,
     points: storyPoints?.value,
   };
+}
+
+const NO_EPIC = '__no_epic__';
+
+/** Épicos abertos e o sugerido: o último usado neste repositório ou, na 1ª vez, o mais usado por você. */
+async function loadEpics(cfg) {
+  const epics = await openEpics(cfg.projectKey);
+  const state = getRepoState();
+  if ('lastEpic' in state) return { epics, suggested: state.lastEpic, why: 'último usado' };
+  const keys = new Set(epics.map((e) => e.key));
+  return { epics, suggested: epics.length ? await mostUsedEpic(cfg.projectKey, keys) : null, why: 'mais usado' };
+}
+
+/** Épico da tarefa nova, com busca por digitação. Devolve { key, summary } ou null (sem épico). */
+async function chooseEpic({ epics, suggested, why }) {
+  if (!epics.length) return null; // projeto sem épicos: nem pergunta
+  const width = Math.max(...epics.map((e) => e.key.length));
+  const option = (e) => ({
+    name: `${c.key(e.key.padEnd(width))}  ${e.summary}${e.key === suggested ? `  ${c.ok(`★ ${why}`)}` : ''}`,
+    short: `${e.key}  ${e.summary}`,
+    value: e.key,
+  });
+  const none = { name: c.dim('— sem épico'), short: 'sem épico', value: NO_EPIC };
+
+  const choice = await searchSelect({
+    message: `Épico da tarefa ${c.dim('· digite para buscar')}`,
+    pageSize: 15,
+    default: suggested ?? NO_EPIC,
+    items: (term) => {
+      if (!term) return [none, separator(`── épicos abertos (${epics.length})`), ...epics.map(option)];
+      const found = matchIssues(epics, term);
+      const list = found.length ? found.map(option) : [new Separator(c.dim(' Nenhum épico encontrado'))];
+      return [...list, separator('──'), none];
+    },
+  });
+  return choice === NO_EPIC ? null : epics.find((e) => e.key === choice);
 }
 
 /** Estimativa opcional, só se o tipo tiver o campo na tela de criação. Devolve { field, value } ou null. */

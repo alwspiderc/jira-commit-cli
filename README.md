@@ -71,6 +71,7 @@ Commite o `.jira-commit.json` gerado: ele é a configuração do time.
   - põe o prefixo do produto no título;
   - preenche a descrição com o corpo do commit e os arquivos alterados;
   - herda labels, componentes e sprint do pai (tarefa sem pai entra na sprint ativa);
+  - tarefa nova pede o épico, com busca e o último usado já selecionado;
   - pergunta os story points (opcional);
   - permite escolher o status inicial.
 - **Compatível com commitlint:** a chave entra depois de `tipo(escopo):`, e o commitlint pode

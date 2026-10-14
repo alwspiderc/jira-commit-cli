@@ -153,7 +153,8 @@ editar.
 {
   "C:/Users/voce/projetos/tatico-cidadao-mobile": {
     "lastParent": "ABDP-2375",
-    "lastIssueByBranch": { "develop": "ABDP-2411" }
+    "lastIssueByBranch": { "develop": "ABDP-2411" },
+    "lastEpic": "ABDP-232"
   }
 }
 ```
@@ -162,6 +163,7 @@ editar.
 |---|---|
 | `lastParent` | Última tarefa pai usada ao criar uma subtarefa. Vem pré-selecionada na próxima vez |
 | `lastIssueByBranch` | Atividade do último commit em cada branch. O cursor do menu começa nela no próximo commit |
+| `lastEpic` | Último épico escolhido ao criar uma tarefa (`null` = "sem épico"). Vem selecionado na próxima vez |
 
 Apagar o arquivo só faz a CLI "esquecer" a última tarefa pai e as últimas atividades.
 
