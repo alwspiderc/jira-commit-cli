@@ -1,0 +1,25 @@
+{
+  "name": "jira-commit-cli",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Liga cada commit a uma issue do Jira Cloud (escolhe uma existente ou cria na hora)",
+  "type": "module",
+  "bin": {
+    "jira-commit": "bin/jira-commit.js"
+  },
+  "files": [
+    "bin",
+    "src"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.133.0",
+    "@inquirer/prompts": "^7.2.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/alwspiderc/jira-commit-cli.git"
+  }
+}
