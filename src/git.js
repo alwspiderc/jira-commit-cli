@@ -36,6 +36,28 @@ export function stagedFiles() {
   }
 }
 
+/**
+ * Descrições dos últimos commits, sem "tipo(escopo):" e sem chave de issue: exemplos de estilo
+ * para a IA. Só entram commits no formato Conventional (ficam de fora "CI: bumps version…").
+ */
+export function recentSubjects(n = 10) {
+  try {
+    return git(`log --no-merges -${n * 5} --format=%s`)
+      .split('\n')
+      .filter((s) => /^[a-z]+(\([^)]*\))?!?: /.test(s) && !s.includes('[skip ci]'))
+      .map((s) =>
+        s
+          .replace(/^[a-z]+(\([^)]*\))?!?: /, '')
+          .replace(/\b[A-Z][A-Z0-9]+-\d+\b:?\s*/g, '')
+          .trim(),
+      )
+      .filter(Boolean)
+      .slice(0, n);
+  } catch {
+    return [];
+  }
+}
+
 /** Diff do stage, cortado em maxChars (vai para a IA, não precisa ser inteiro). */
 export function stagedDiff(maxChars = 8000) {
   try {
