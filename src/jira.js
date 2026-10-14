@@ -76,10 +76,42 @@ export async function getIssue(key) {
   };
 }
 
-/** Tipos de issue que dá para criar no projeto: { id, name, subtask }. */
+/** Tipos de issue que dá para criar no projeto: { id, name, subtask, level } (level 1 = épico). */
 export async function issueTypes(projectKey) {
   const data = await request(`/rest/api/3/issue/createmeta/${encodeURIComponent(projectKey)}/issuetypes`);
-  return data.issueTypes.map((t) => ({ id: t.id, name: t.name, subtask: Boolean(t.subtask) }));
+  return data.issueTypes.map((t) => ({
+    id: t.id,
+    name: t.name,
+    subtask: Boolean(t.subtask),
+    level: t.hierarchyLevel,
+  }));
+}
+
+/**
+ * Épicos abertos do projeto: { key, summary }. O tipo é achado pelo nível da hierarquia, não
+ * pelo nome, que muda conforme a instância ("Epic", "Épico").
+ */
+export async function openEpics(projectKey) {
+  const ids = (await issueTypes(projectKey)).filter((t) => t.level === 1).map((t) => t.id);
+  if (!ids.length) return [];
+  const jql = `project = ${projectKey} AND issuetype in (${ids.join(', ')}) AND statusCategory != Done ORDER BY updated DESC`;
+  return (await searchIssues(jql, 200)).map(({ key, summary }) => ({ key, summary }));
+}
+
+/** Épico que mais aparece como pai das suas atividades recentes no projeto (chave), ou null. */
+export async function mostUsedEpic(projectKey, epicKeys) {
+  const params = new URLSearchParams({
+    jql: `project = ${projectKey} AND assignee = currentUser() AND parent is not EMPTY ORDER BY created DESC`,
+    fields: 'parent',
+    maxResults: '50',
+  });
+  const data = await request(`/rest/api/3/search/jql?${params}`);
+  const count = new Map();
+  for (const i of data.issues) {
+    const key = i.fields.parent?.key; // de subtarefa o pai é a tarefa, e não entra na conta
+    if (epicKeys.has(key)) count.set(key, (count.get(key) ?? 0) + 1);
+  }
+  return [...count].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
 }
 
 export function getMyself() {
@@ -87,11 +119,54 @@ export function getMyself() {
 }
 
 /**
- * Cria a issue já atribuída a quem está commitando e devolve a chave (ex.: PROJ-123).
- * Com parentKey vira subtarefa (o sprint vem do pai automaticamente).
- * description é um documento ADF (ver adf.js).
+ * Campo de estimativa (story points) na tela de criação do tipo, ou null se o tipo não tiver.
+ * Projeto team-managed usa "Story point estimate"; company-managed, "Story Points".
  */
-export async function createIssue({ projectKey, summary, issueType, parentKey, description, labels, components }) {
+export async function storyPointsField(projectKey, issueTypeName) {
+  const type = (await issueTypes(projectKey)).find((t) => t.name === issueTypeName);
+  if (!type) return null;
+  const data = await request(
+    `/rest/api/3/issue/createmeta/${encodeURIComponent(projectKey)}/issuetypes/${type.id}?maxResults=200`,
+  );
+  const points = data.fields.filter((f) => /story point/i.test(f.name) && f.schema?.type === 'number');
+  return (points.find((f) => /estimate/i.test(f.name)) ?? points[0])?.fieldId ?? null;
+}
+
+/** Sprint ativa do primeiro quadro do projeto que tiver uma: { id, name }, ou null (ex.: só Kanban). */
+export async function activeSprint(projectKey) {
+  const boards = await request(`/rest/agile/1.0/board?projectKeyOrId=${encodeURIComponent(projectKey)}`);
+  for (const board of boards.values ?? []) {
+    try {
+      const sprints = await request(`/rest/agile/1.0/board/${board.id}/sprint?state=active`);
+      if (sprints.values?.length) return { id: sprints.values[0].id, name: sprints.values[0].name };
+    } catch {
+      // quadro sem sprints (Kanban) responde erro: tenta o próximo
+    }
+  }
+  return null;
+}
+
+/** Coloca a issue na sprint (a API de sprints dispensa descobrir o customfield de sprint). */
+export function moveToSprint(sprintId, key) {
+  return request(`/rest/agile/1.0/sprint/${sprintId}/issue`, { method: 'POST', body: { issues: [key] } });
+}
+
+/**
+ * Cria a issue já atribuída a quem está commitando e devolve a chave (ex.: PROJ-123).
+ * Com parentKey vira subtarefa (o sprint vem do pai automaticamente); com epicKey, a tarefa fica
+ * no épico. description é um documento ADF (ver adf.js). storyPoints é { field, value } (opcional).
+ */
+export async function createIssue({
+  projectKey,
+  summary,
+  issueType,
+  parentKey,
+  epicKey,
+  description,
+  labels,
+  components,
+  storyPoints,
+}) {
   const me = await getMyself();
   const fields = {
     project: { key: projectKey },
@@ -99,10 +174,11 @@ export async function createIssue({ projectKey, summary, issueType, parentKey, d
     issuetype: { name: issueType },
     assignee: { accountId: me.accountId },
   };
-  if (parentKey) fields.parent = { key: parentKey };
+  if (parentKey || epicKey) fields.parent = { key: parentKey ?? epicKey }; // o pai de uma tarefa é o épico
   if (description) fields.description = description;
   if (labels?.length) fields.labels = labels;
   if (components?.length) fields.components = components;
+  if (storyPoints) fields[storyPoints.field] = storyPoints.value;
 
   const data = await request('/rest/api/3/issue', { method: 'POST', body: { fields } });
   return data.key;

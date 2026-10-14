@@ -14,13 +14,18 @@ import {
   issueTypes,
   getTransitions,
   transitionIssue,
+  storyPointsField,
+  activeSprint,
+  moveToSprint,
+  openEpics,
+  mostUsedEpic,
 } from '../jira.js';
 import { currentBranch, stagedFiles, stagedDiff, recentSubjects } from '../git.js';
 import { commitDescription } from '../adf.js';
 import { suggestTitle, suggestSubject, aiEnabled } from '../ai.js';
-import { askCommit, askDetails, detailLines } from '../message.js';
+import { askCommit, askDetails, detailLines, normalize } from '../message.js';
 import { buildTree, treeLines } from '../tree.js';
-import { select, input, confirm, Separator, c, icon, log, header, withSpinner, card } from '../ui.js';
+import { select, searchSelect, input, field, confirm, Separator, c, icon, log, header, withSpinner, card } from '../ui.js';
 
 const OTHER_STATUSES = '__other__';
 const NEW = '__new__';
@@ -98,7 +103,7 @@ function prefetchIssues(cfg) {
 }
 
 /** Cartão final: atividade, o que foi criado/movido, a mensagem nova e o link. */
-function summaryCard({ key, title, created, parentKey, movedTo }, message) {
+function summaryCard({ key, title, created, parentKey, movedTo, epic, sprint, points }, message) {
   let link;
   try {
     link = `${loadCredentials().baseUrl}/browse/${key}`;
@@ -108,6 +113,9 @@ function summaryCard({ key, title, created, parentKey, movedTo }, message) {
 
   const details = [
     created && (parentKey ? `nova subtarefa de ${c.key(parentKey)}` : 'nova atividade'),
+    epic && `épico ${c.key(epic)}`,
+    sprint && c.accent(sprint),
+    points && `${points} pts`,
     movedTo && `status ${c.accent(movedTo)}`,
   ].filter(Boolean);
 
@@ -123,7 +131,7 @@ function summaryCard({ key, title, created, parentKey, movedTo }, message) {
 /** Pede a 1ª linha do commit. Com {prefix} no format (commitlint), exige "tipo(escopo): descrição". */
 async function askMessage(cfg) {
   const conventional = cfg.format.includes('{prefix}');
-  const message = await input({
+  const message = await field({
     message: `Mensagem do commit ${c.dim(conventional ? '· ex.: feat(home): adiciona card' : '· ex.: adiciona card')}`,
     validate: (v) => {
       if (!v.trim()) return 'A mensagem não pode ficar vazia';
@@ -159,6 +167,7 @@ async function chooseIssue(cfg, commit, keyRegex, branch, prefetch) {
   // senão, a do último commit nesta branch (commits seguidos costumam ser da mesma atividade)
   const branchKey = branch.match(keyRegex)?.[0];
   const lastKey = getRepoState().lastIssueByBranch?.[branch];
+  const found = new Map(); // atividades achadas na busca do projeto, para o título no fim
   let all = false;
   let choice;
   let issues = null;
@@ -185,51 +194,61 @@ async function chooseIssue(cfg, commit, keyRegex, branch, prefetch) {
     const keys = new Set([...lastChoice, ...taskChoices].map((ch) => ch.value).filter(Boolean));
     const hasDetails = Boolean(commit.details.body || commit.details.breaking);
 
-    choice = await select({
-      message: all
-        ? `Qual atividade é esse commit? ${c.dim('· todos os status')}`
-        : 'Qual atividade é esse commit?',
+    const actions = [
+      {
+        name: c.ok('+ Criar nova atividade'),
+        short: 'Criar nova atividade',
+        value: NEW,
+        description: 'Cria uma tarefa ou subtarefa no Jira a partir deste commit e já vincula',
+      },
+      all
+        ? { name: c.warn('← Voltar aos status padrão'), short: 'Status padrão', value: OTHER_STATUSES }
+        : {
+            name: c.warn('⋯ Ver outros status'),
+            short: 'Outros status',
+            value: OTHER_STATUSES,
+            description: 'Mostra todas as suas atividades abertas, não só as dos status padrão',
+          },
+      {
+        name: c.accent('✎ Digitar a chave'),
+        short: 'Digitar a chave',
+        value: MANUAL,
+        description: 'Para uma atividade que não é sua ou não aparece na lista',
+      },
+      {
+        name: c.accent(`¶ ${hasDetails ? 'Editar' : 'Adicionar'} corpo / BREAKING CHANGE`),
+        short: 'Corpo / BREAKING CHANGE',
+        value: DETAILS,
+        description: 'Texto mais longo e quebra de compatibilidade, os dois opcionais. Depois volta para esta lista',
+      },
+      {
+        name: c.dim('↷ Pular'),
+        short: 'Pular',
+        value: SKIP,
+        description: 'Commita sem chave do Jira',
+      },
+    ];
+    const listed = issues; // valor fixo para as funções do prompt ("issues" muda no "outros status")
+
+    choice = await searchSelect({
+      message: `Qual atividade é esse commit? ${c.dim(`${all ? '· todos os status ' : ''}· digite para buscar`)}`,
       pageSize: 15,
-      loop: false, // para no fim da lista em vez de voltar ao começo
       // cursor começa na task da branch, na última usada ou na primeira task, nunca numa ação
       default: [branchKey, lastKey].find((k) => keys.has(k)) ?? taskChoices.find((ch) => ch.value)?.value,
-      choices: [
-        {
-          name: c.ok('+ Criar nova atividade'),
-          short: 'Criar nova atividade',
-          value: NEW,
-          description: 'Cria uma tarefa ou subtarefa no Jira a partir deste commit e já vincula',
-        },
-        all
-          ? { name: c.warn('← Voltar aos status padrão'), short: 'Status padrão', value: OTHER_STATUSES }
-          : {
-              name: c.warn('⋯ Ver outros status'),
-              short: 'Outros status',
-              value: OTHER_STATUSES,
-              description: 'Mostra todas as suas atividades abertas, não só as dos status padrão',
-            },
-        {
-          name: c.accent('✎ Digitar a chave'),
-          short: 'Digitar a chave',
-          value: MANUAL,
-          description: 'Para uma atividade que não é sua ou não aparece na lista',
-        },
-        {
-          name: c.accent(`¶ ${hasDetails ? 'Editar' : 'Adicionar'} corpo / BREAKING CHANGE`),
-          short: 'Corpo / BREAKING CHANGE',
-          value: DETAILS,
-          description: 'Texto mais longo e quebra de compatibilidade, os dois opcionais. Depois volta para esta lista',
-        },
-        {
-          name: c.dim('↷ Pular'),
-          short: 'Pular',
-          value: SKIP,
-          description: 'Commita sem chave do Jira',
-        },
-        new Separator(c.dim(`── ${all ? 'todas as abertas' : 'suas atividades'} (${issues.length}) `.padEnd(40, '─'))),
-        ...lastChoice,
-        ...taskChoices,
-      ],
+      items: (term, remote) =>
+        term
+          ? searchResults(term, remote, { cfg, issues: listed, branchKey, lastKey, actions })
+          : [
+              ...actions,
+              separator(`── ${all ? 'todas as abertas' : 'suas atividades'} (${listed.length})`),
+              ...lastChoice,
+              ...taskChoices,
+            ],
+      remote: async (term) => {
+        const results = await searchProject(cfg, term);
+        results.forEach((i) => found.set(i.key, i));
+        return results;
+      },
     });
     if (choice === OTHER_STATUSES) {
       all = !all;
@@ -244,7 +263,64 @@ async function chooseIssue(cfg, commit, keyRegex, branch, prefetch) {
   if (choice === SKIP) return null;
   if (choice === MANUAL) return manualKey(cfg, keyRegex);
   if (choice === NEW) return createFromCommit(cfg, commit, issues, keyRegex);
-  return { key: choice, title: issues.find((i) => i.key === choice)?.summary };
+  return { key: choice, title: (issues.find((i) => i.key === choice) ?? found.get(choice))?.summary };
+}
+
+const separator = (label) => new Separator(c.dim(`${label} `.padEnd(40, '─')));
+
+/**
+ * Menu com termo digitado: as suas atividades que batem, as outras do projeto (quando a busca
+ * no Jira chega) e as ações no fim, para o cursor cair numa atividade e não numa ação.
+ */
+function searchResults(term, remote, { cfg, issues, branchKey, lastKey, actions }) {
+  const local = matchIssues(issues, term);
+  const isMine = (r) => issues.some((i) => i.key === r.key);
+  // o Jira pode achar uma das suas que o filtro local não pegou: ela entra com as suas
+  const mine = [...local, ...remote.results.filter((r) => isMine(r) && !local.some((l) => l.key === r.key))];
+  const others = remote.results.filter((r) => !isMine(r));
+  const searching = remote.status === 'loading' && Boolean(projectSearchJql(cfg, term));
+  const failed = remote.status === 'error';
+  return [
+    ...(mine.length ? [separator(`── suas atividades (${mine.length})`), ...issueChoices(mine, branchKey, lastKey)] : []),
+    ...(searching ? [separator('── buscando no projeto…')] : []),
+    ...(failed ? [separator('── não consegui buscar no projeto')] : []),
+    ...(others.length ? [separator(`── outras no projeto (${others.length})`), ...issueChoices(others)] : []),
+    ...(!mine.length && !others.length && !searching && !failed
+      ? [new Separator(c.dim(' Nenhuma atividade encontrada'))]
+      : []),
+    separator('── ações'),
+    ...actions,
+  ];
+}
+
+/** Suas atividades cujo título ou chave têm todas as palavras digitadas (sem acento e sem maiúscula). */
+export function matchIssues(issues, term) {
+  const words = normalize(term).split(/\s+/).filter(Boolean);
+  return issues.filter((i) => {
+    const text = normalize(`${i.key} ${i.summary}`);
+    return words.every((w) => text.includes(w));
+  });
+}
+
+/**
+ * JQL da busca no projeto inteiro (qualquer responsável, só abertas): pela chave ("LOJA-12" ou
+ * "12") ou por palavras do título, cada uma como prefixo. null quando não há o que buscar.
+ * No Jira, os acentos contam: "benef" e "benefício" acham, "beneficio" não.
+ */
+export function projectSearchJql(cfg, term) {
+  const t = term.trim();
+  const key = t.toUpperCase().match(new RegExp(`^(?:${cfg.projectKey}-)?(\\d+)$`));
+  if (key) return `key = ${cfg.projectKey}-${key[1]}`;
+  // a pontuação separa palavras ("README.md" → README, md): apagá-la colaria tudo em "READMEmd"
+  const words = t.split(/[^\p{L}\p{N}]+/u).filter((w) => w.length >= 2);
+  if (!words.length) return null;
+  const title = words.map((w) => `summary ~ "${w}*"`).join(' AND ');
+  return `project = ${cfg.projectKey} AND statusCategory != Done AND ${title} ORDER BY updated DESC`;
+}
+
+async function searchProject(cfg, term) {
+  const jql = projectSearchJql(cfg, term);
+  return jql ? searchIssues(jql, cfg.maxResults) : [];
 }
 
 /** Tarefas com as subtarefas penduradas embaixo; a família da branch vem primeiro. */
@@ -276,6 +352,8 @@ const SUBTASK = '__subtask__';
 const TASK = '__task__';
 
 async function createFromCommit(cfg, commit, issues, keyRegex) {
+  // épicos para a tarefa sem pai: a busca começa já, enquanto a pessoa escolhe o tipo
+  const epicsLookup = loadEpics(cfg).catch(() => null);
   const kind = await select({
     message: 'Que tipo de atividade?',
     choices: [
@@ -284,7 +362,7 @@ async function createFromCommit(cfg, commit, issues, keyRegex) {
         value: SUBTASK,
         description: 'Fica embaixo de uma tarefa existente e herda sprint, labels e componentes',
       },
-      { name: `▣ ${cfg.issueType}`, value: TASK, description: 'Tarefa nova, sem pai' },
+      { name: `▣ ${cfg.issueType}`, value: TASK, description: 'Tarefa nova, num épico, já na sprint ativa' },
     ],
   });
 
@@ -294,6 +372,20 @@ async function createFromCommit(cfg, commit, issues, keyRegex) {
     if (!chosen) return null;
     parent = await withSpinner(`Carregando ${chosen.key}…`, () => getIssue(chosen.key));
   }
+
+  let epic = null;
+  const epics = kind === TASK ? await withSpinner('Buscando os épicos…', () => epicsLookup) : null;
+  if (epics) epic = await chooseEpic(epics);
+
+  // Rodam enquanto a pessoa escreve o título. Tarefa sem pai vai para a sprint ativa (subtarefa já
+  // segue a do pai); se a busca falhar, a tarefa só fica sem sprint, como antes.
+  const issueTypePromise = parent ? subtaskTypeName(cfg) : Promise.resolve(cfg.issueType);
+  issueTypePromise.catch(() => {}); // o erro aparece no await abaixo; sem isso o Node encerraria antes
+  const sprintLookup = parent ? Promise.resolve(null) : activeSprint(cfg.projectKey).catch(() => null);
+  const pointsLookup =
+    cfg.storyPoints === false
+      ? Promise.resolve(null)
+      : issueTypePromise.then((type) => storyPointsField(cfg.projectKey, type)).catch(() => null);
 
   // Título: prefixo do produto + sugestão da IA (ou o texto do commit), tudo editável
   const files = stagedFiles();
@@ -307,7 +399,7 @@ async function createFromCommit(cfg, commit, issues, keyRegex) {
   const prefix = resolvePrefix(cfg.summaryPrefix, parent ? productOf(parent.summary) : mostCommonProduct(issues));
 
   const summary = (
-    await input({
+    await field({
       message: suggestion ? `Título ${c.dim('· sugerido pela IA')}` : 'Título',
       default: prefix + (suggestion ?? commit.subject),
       prefill: 'editable',
@@ -315,8 +407,13 @@ async function createFromCommit(cfg, commit, issues, keyRegex) {
     })
   ).trim();
 
-  const issueType = parent ? await subtaskTypeName(cfg) : cfg.issueType;
-  const where = parent ? `subtarefa de ${c.key(parent.key)}` : `${issueType} em ${c.key(cfg.projectKey)}`;
+  const issueType = await issueTypePromise;
+  const storyPoints = await askStoryPoints(await pointsLookup);
+  const sprint = await sprintLookup;
+  const where = parent
+    ? `subtarefa de ${c.key(parent.key)}`
+    : `${issueType} em ${c.key(cfg.projectKey)}${epic ? ` no épico ${c.key(epic.key)}` : ''}` +
+      (sprint ? ` na ${c.accent(sprint.name)}` : '');
   const ok = await confirm({ message: `Criar ${where}?`, default: true });
   if (!ok) return null;
 
@@ -328,6 +425,7 @@ async function createFromCommit(cfg, commit, issues, keyRegex) {
         summary,
         issueType,
         parentKey: parent?.key,
+        epicKey: epic?.key,
         // corpo que veio na mensagem + o que foi digitado no atalho de detalhes
         description: commitDescription({
           body: [detailLines(commit.details).join('\n').trim(), commit.body].filter(Boolean).join('\n\n'),
@@ -336,13 +434,87 @@ async function createFromCommit(cfg, commit, issues, keyRegex) {
         // o sprint o Jira herda do pai sozinho; labels e componentes, não
         labels: parent?.labels,
         components: parent?.components,
+        storyPoints,
       }),
     { done: (k) => `${c.key(k)} criada no Jira` },
   );
   if (parent) setRepoState({ lastParent: parent.key });
+  if (epics?.epics.length) setRepoState({ lastEpic: epic?.key ?? null }); // "sem épico" também é lembrado
 
+  const inSprint = sprint && (await addToSprint(sprint, key));
   const movedTo = await chooseInitialStatus(key);
-  return { key, title: summary, created: true, parentKey: parent?.key, movedTo };
+  return {
+    key,
+    title: summary,
+    created: true,
+    parentKey: parent?.key,
+    movedTo,
+    epic: epic?.key,
+    sprint: inSprint ? sprint.name : null,
+    points: storyPoints?.value,
+  };
+}
+
+const NO_EPIC = '__no_epic__';
+
+/** Épicos abertos e o sugerido: o último usado neste repositório ou, na 1ª vez, o mais usado por você. */
+async function loadEpics(cfg) {
+  const epics = await openEpics(cfg.projectKey);
+  const state = getRepoState();
+  if ('lastEpic' in state) return { epics, suggested: state.lastEpic, why: 'último usado' };
+  const keys = new Set(epics.map((e) => e.key));
+  return { epics, suggested: epics.length ? await mostUsedEpic(cfg.projectKey, keys) : null, why: 'mais usado' };
+}
+
+/** Épico da tarefa nova, com busca por digitação. Devolve { key, summary } ou null (sem épico). */
+async function chooseEpic({ epics, suggested, why }) {
+  if (!epics.length) return null; // projeto sem épicos: nem pergunta
+  const width = Math.max(...epics.map((e) => e.key.length));
+  const option = (e) => ({
+    name: `${c.key(e.key.padEnd(width))}  ${e.summary}${e.key === suggested ? `  ${c.ok(`★ ${why}`)}` : ''}`,
+    short: `${e.key}  ${e.summary}`,
+    value: e.key,
+  });
+  const none = { name: c.dim('— sem épico'), short: 'sem épico', value: NO_EPIC };
+
+  const choice = await searchSelect({
+    message: `Épico da tarefa ${c.dim('· digite para buscar')}`,
+    pageSize: 15,
+    default: suggested ?? NO_EPIC,
+    items: (term) => {
+      if (!term) return [none, separator(`── épicos abertos (${epics.length})`), ...epics.map(option)];
+      const found = matchIssues(epics, term);
+      const list = found.length ? found.map(option) : [new Separator(c.dim(' Nenhum épico encontrado'))];
+      return [...list, separator('──'), none];
+    },
+  });
+  return choice === NO_EPIC ? null : epics.find((e) => e.key === choice);
+}
+
+/** Estimativa opcional, só se o tipo tiver o campo na tela de criação. Devolve { field, value } ou null. */
+async function askStoryPoints(field) {
+  if (!field) return null;
+  const value = await select({
+    message: `Story points ${c.dim('· opcional')}`,
+    choices: [
+      { name: c.dim('— sem estimativa'), short: 'sem estimativa', value: null },
+      ...[1, 2, 3, 5, 8, 13].map((n) => ({ name: String(n), value: n })),
+    ],
+  });
+  return value === null ? null : { field, value };
+}
+
+/** Põe a tarefa nova na sprint ativa. Se falhar, ela continua criada (fica no backlog). */
+async function addToSprint(sprint, key) {
+  try {
+    await withSpinner(`Colocando na ${sprint.name}…`, () => moveToSprint(sprint.id, key), {
+      done: `${c.key(key)} na ${c.accent(sprint.name)}`,
+    });
+    return true;
+  } catch (err) {
+    log.warn(`Não consegui colocar na ${sprint.name} (${err.message}). A atividade ficou no backlog.`);
+    return false;
+  }
 }
 
 /** Pai da subtarefa: as tarefas da árvore atual, com a última usada pré-selecionada. */

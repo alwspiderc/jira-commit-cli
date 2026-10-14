@@ -8,7 +8,7 @@ nova na hora, inclusive como subtarefa, a partir do commit.
 ◆ jira-commit  LOJA · develop
 │ feat(home): adiciona card de benefício
 
-◆ Qual atividade é esse commit?
+◆ Qual atividade é esse commit? · digite para buscar
   + Criar nova atividade
   ⋯ Ver outros status
   ✎ Digitar a chave
@@ -28,9 +28,9 @@ feat(home): adiciona card de benefício   →   feat(home): LOJA-2411 adiciona c
 
 ```bash
 npm i -D git+https://github.com/alwspiderc/jira-commit-cli.git   # no repositório
-npx jira-commit login     # uma vez por máquina: URL, e-mail e API token
-npx jira-commit init      # uma vez por repo: cria .jira-commit.json, o hook e o npm run commit
-npm run commit            # pelo terminal: tipo, escopo, descrição e a atividade do Jira
+npx --no-install jira-commit login   # uma vez por máquina: URL, e-mail e API token
+npx --no-install jira-commit init    # uma vez por repo: .jira-commit.json, hook e npm run commit
+npm run commit                       # pelo terminal: tipo, escopo, descrição e atividade do Jira
 ```
 
 Commite o `.jira-commit.json` gerado: ele é a configuração do time.
@@ -39,6 +39,10 @@ Commite o `.jira-commit.json` gerado: ele é a configuração do time.
 > impede publicação por engano). Ele é instalado direto deste repositório privado, então é
 > preciso ter acesso a ele no GitHub. O comando é `jira-commit`. Veja mais opções no
 > [guia de uso](docs/guia-de-uso.md#3-instalação).
+>
+> **Sempre use `npx --no-install`.** Existe um pacote público **diferente** chamado
+> `jira-commit` no npm. Sem o `--no-install`, se a CLI não estiver instalada no projeto, o
+> npx oferece baixar esse outro pacote, que pediria as suas credenciais do Jira.
 
 ## Comandos
 
@@ -58,13 +62,17 @@ Commite o `.jira-commit.json` gerado: ele é a configuração do time.
   `npm run commit` commita sem abrir o editor.
 - **Menos espera:** a busca no Jira e a sugestão de descrição por IA rodam enquanto você
   responde, e o menu já começa na atividade do último commit da branch.
+- **Busca pelo título:** digite no menu para filtrar as suas atividades na hora e achar
+  outras do projeto inteiro, de qualquer responsável, sem precisar saber a chave.
 - **Árvore de tarefas e subtarefas**, com o status colorido e a família da branch no topo.
 - **Filtro por status** com os nomes como aparecem na tela do Jira (traduzidos).
 - **Criação de subtarefa no commit:**
   - lembra a última tarefa pai usada;
   - põe o prefixo do produto no título;
   - preenche a descrição com o corpo do commit e os arquivos alterados;
-  - herda labels, componentes e sprint do pai;
+  - herda labels, componentes e sprint do pai (tarefa sem pai entra na sprint ativa);
+  - tarefa nova pede o épico, com busca e o último usado já selecionado;
+  - pergunta os story points (opcional);
   - permite escolher o status inicial.
 - **Compatível com commitlint:** a chave entra depois de `tipo(escopo):`, e o commitlint pode
   ler os mesmos tipos e escopos do `.jira-commit.json`. O `init` migra projetos com commitizen.

@@ -2,6 +2,7 @@
 import { readFileSync } from 'node:fs';
 import { styleText, stripVTControlCharacters } from 'node:util';
 import * as inquirer from '@inquirer/prompts';
+import searchSelectPrompt from './search-select.js';
 
 export const c = {
   brand: (t) => styleText(['bold', 'magenta'], t),
@@ -38,6 +39,7 @@ const theme = {
   style: {
     message: (text) => c.bold(text),
     answer: (text) => c.accent(text),
+    searchTerm: (text) => c.accent(text),
     highlight: (text) => text,
     description: (text) => c.dim(`  ${text}`),
     keysHelpTip: (keys) =>
@@ -52,7 +54,23 @@ export const input = themed(inquirer.input);
 export const confirm = themed(inquirer.confirm);
 export const password = themed(inquirer.password);
 export const search = themed(inquirer.search); // select com filtro: digitar "fe" acha "feat"
+export const searchSelect = themed(searchSelectPrompt); // select + busca local e remota (menu de atividades)
 export const { Separator } = inquirer;
+
+/**
+ * Exibição de texto livre que pode passar da largura do terminal. O @inquirer quebra a linha por
+ * palavra, mas põe o cursor como se quebrasse por caractere: cada quebra deixava o cursor algumas
+ * colunas antes do fim do texto. Aqui o texto vai numa linha própria e com espaços que não quebram
+ * (NBSP, só na tela; o valor continua com espaços normais), então a quebra cai exatamente na
+ * largura, onde o readline espera o cursor.
+ */
+export function fieldTransformer(value, { isFinal }) {
+  if (isFinal) return c.accent(value);
+  return `\n${value.replaceAll(' ', ' ') || ' '}`;
+}
+
+/** input para texto longo (descrição, título, corpo): ver fieldTransformer. */
+export const field = (config) => input({ transformer: fieldTransformer, ...config });
 
 // ---------- Mensagens ----------
 
