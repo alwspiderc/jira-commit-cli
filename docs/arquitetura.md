@@ -25,6 +25,7 @@ jira-commit-cli/
 │  │  └─ list.js            Lista atividades (mesma árvore do menu)
 │  ├─ config.js             Credenciais, estado local, .jira-commit.json, montagem do JQL
 │  ├─ message.js            Questionário do commit (tipo, escopo, descrição) e corpo/BREAKING CHANGE
+│  ├─ search-select.js      Prompt do menu de atividades: filtro local na hora + busca no Jira em paralelo
 │  ├─ jira.js               Cliente da API REST v3 do Jira
 │  ├─ git.js                Raiz do repo, branch, arquivos, diff do stage e descrições recentes
 │  ├─ tree.js               Agrupa subtarefas sob o pai e desenha as linhas
@@ -51,7 +52,8 @@ git commit  /  npm run commit (= git commit --no-edit, sem editor no fim)
             │                    └ sem "commit": askMessage() (a linha inteira)
             │
             ├─ chooseIssue(): usa a busca antecipada (falha → pede a chave manualmente)
-            ├─ buildTree() + treeLines() → menu   (cursor: chave da branch > última usada)
+            ├─ buildTree() + treeLines() → menu (searchSelect)   (cursor: chave da branch > última usada)
+            │     ├─ digitou? → matchIssues() na lista + projectSearchJql() no Jira (300 ms sem digitar)
             │     ├─ atividade escolhida ─────────┐
             │     ├─ ⋯ outros status → busca de novo com { all: true }
             │     ├─ ¶ detalhes → askDetails() → volta ao menu
@@ -85,7 +87,7 @@ Todos ficam na API REST v3, com autenticação Basic (`email:token` em base64) e
 
 | Função | Método e caminho | Uso |
 |---|---|---|
-| `searchIssues` | `GET /rest/api/3/search/jql` | Busca as atividades (endpoint novo. O `/search` antigo foi descontinuado) |
+| `searchIssues` | `GET /rest/api/3/search/jql` | Busca as atividades e a busca pelo título no projeto (endpoint novo. O `/search` antigo foi descontinuado) |
 | `projectStatuses` | `GET /rest/api/3/project/{key}/statuses` | Nome traduzido → ID do status |
 | `issueTypes` | `GET /rest/api/3/issue/createmeta/{key}/issuetypes` | Tipos do projeto (`init` e tipo de subtarefa) |
 | `getIssue` | `GET /rest/api/3/issue/{key}` | Pai da subtarefa e status atual |
@@ -131,6 +133,18 @@ escolhe tipo e escopo, e o menu abre sem spinner. As promessas recebem `.catch((
 para o Node não avisar de rejeição não tratada; o erro real aparece quando o resultado é
 usado.
 
+**Prompt próprio no menu de atividades (`search-select.js`).** O `@inquirer/search` não
+serve por dois motivos. Ele não tem `default`, então o cursor não começaria na atividade
+sugerida. E ele só troca a lista quando a busca assíncrona termina, então o filtro das
+suas atividades esperaria a rede (0,3 a 1 s por consulta). O prompt próprio, feito com o
+`@inquirer/core`, refaz a lista local na hora e acrescenta os resultados do Jira quando
+chegam (com 300 ms de espera sem digitar e a busca anterior cancelada).
+
+Um detalhe do `@inquirer/core`: um `setState` feito dentro de um `useEffect`, num render
+disparado por tecla, **não redesenha a tela**, porque as atualizações da tecla são juntadas e
+a do efeito se perde. Por isso o estado "buscando" é marcado no próprio keypress, junto com
+o termo, e o efeito só agenda a busca.
+
 **`git commit --no-edit` sem `-m`.** Sem `-m`, o git roda o `prepare-commit-msg` com o
 arquivo vazio (sem os comentários do template) e usa o que o hook gravou, sem abrir o
 editor. É isso que o `npm run commit` usa.
@@ -154,7 +168,7 @@ npm install
 # usar num repositório de teste sem alterar o package.json dele
 cd /caminho/do/repo-de-teste
 npm i --no-save /caminho/para/jira-commit-cli
-npx jira-commit list
+npx --no-install jira-commit list
 ```
 
 Como o pacote fica linkado, as mudanças no código valem na hora.
@@ -163,13 +177,26 @@ Como o pacote fica linkado, as mudanças no código valem na hora.
 
 ```bash
 echo "feat(home): teste" > /tmp/msg
-npx jira-commit hook /tmp/msg message
+npx --no-install jira-commit hook /tmp/msg message
 cat /tmp/msg
 ```
 
-**Funções puras** que dá para testar isoladamente: `splitConventional`, `commitBody`,
-`resolvePrefix`, `productOf`, `mostCommonProduct` (em `hook.js`), `buildTree` e
-`treeLines` (`tree.js`), e `commitDescription` (`adf.js`).
+Para testar o **questionário** (tipo, escopo, descrição), comece com o arquivo vazio:
+
+```bash
+: > /tmp/msg
+npx --no-install jira-commit hook /tmp/msg ""
+cat /tmp/msg
+```
+
+Nos dois casos, Ctrl+C no menu de atividades sai sem gravar a chave e não mexe no Jira.
+
+**Não há suíte de testes automatizados** (o `package.json` não tem script `test`). As
+**funções puras** são o ponto de partida para criar uma: `splitConventional`, `commitBody`,
+`resolvePrefix`, `productOf`, `mostCommonProduct`, `matchIssues`, `projectSearchJql` (em
+`hook.js`), `filterChoices` e
+`detailLines` (`message.js`), `fromCz` (`init.js`), `buildTree` e `treeLines` (`tree.js`)
+e `commitDescription` (`adf.js`).
 
 > Atenção: criar atividades de teste mexe no Jira compartilhado do time. Use um título
 > óbvio ("[TESTE jira-commit] apagar") e apague depois.
@@ -177,7 +204,16 @@ cat /tmp/msg
 ## Limitações conhecidas
 
 - **Commit por cliente gráfico** pula o hook (não há terminal para o menu).
+- **CLI ausente bloqueia o commit:** o hook chama `npx --no-install jira-commit`. Se a CLI
+  não estiver instalada (ex.: um colega sem ela, ou depois de um `npm install` com a
+  instalação `--no-save`), o npx falha e o commit é cancelado. Para adotar aos poucos num
+  time, todos precisam ter a CLI antes de o hook entrar no repositório.
+- **Nome no npm:** existe um pacote público **diferente** chamado `jira-commit`. Por isso o
+  hook e a documentação usam `npx --no-install`: sem ele, o npx ofereceria baixar o outro
+  pacote quando a CLI não está instalada.
 - **`jql` próprio** não converte nomes de status traduzidos. Prefira `statuses`.
+- **Busca pelo título no projeto** respeita os acentos (é o Jira que busca): `beneficio` não
+  acha "benefício". O filtro das suas atividades, que é local, ignora acentos.
 - **Árvore de um nível:** só subtarefas → pai. Épicos não aparecem.
 - **IA** só detecta a chave por variável de ambiente (não lê perfis do `ant auth login`).
 - **Credenciais** ficam em texto puro. No Windows, a permissão `600` não tem efeito.
@@ -186,5 +222,3 @@ cat /tmp/msg
   (`npm i -D git+https://github.com/alwspiderc/jira-commit-cli.git`), e por isso o
   `package.json` precisa ficar na **raiz** do repositório. Para lançar uma versão, suba o
   `version` e crie a tag (`git tag v0.2.0 && git push --tags`).
-- No projeto tatico-cidadao-mobile, o `ticketNumberRegExp: '\\d{4}'` do cz vai rejeitar
-  chaves a partir da `ABDP-10000`.

@@ -46,7 +46,7 @@ Exemplo completo (projeto tatico-cidadao-mobile):
 | `format` | string | `"{key}: {message}"` | Como a chave entra na 1ª linha do commit. Veja os placeholders abaixo |
 | `statuses` | string[] | *(todas as abertas)* | Status mostrados por padrão no menu e no `list`. Use os nomes **como aparecem na tela** |
 | `jql` | string | *(montado pela CLI)* | JQL próprio. **Substitui** `statuses` e o filtro de responsável |
-| `maxResults` | number | `20` | Máximo de atividades buscadas por vez |
+| `maxResults` | number | `20` | Máximo de atividades buscadas por vez (no menu e na busca pelo título no projeto) |
 | `ai` | boolean | `true` | `false` desliga as sugestões por IA (descrição do commit e título da atividade) neste repositório |
 | `aiModel` | string | `"claude-opus-5-5"` | Modelo da sugestão por IA. Ex.: `"claude-haiku-5-5"` para respostas mais rápidas |
 | `commit` | object \| `false` | *(sem questionário)* | Liga as perguntas de tipo, escopo e descrição no commit. Veja abaixo. `false` = o `init` não oferece de novo |
@@ -185,7 +185,19 @@ if sh -c ": >/dev/tty" 2>/dev/null; then npx --no-install jira-commit hook "$1" 
 - `sh -c ": >/dev/tty"` testa se existe um terminal. Em clientes gráficos não existe, e o
   hook é pulado.
 - `npx --no-install` usa a CLI instalada no projeto e nunca baixa nada na hora do commit.
+  Se ela não estiver instalada, o npx falha e **o commit é cancelado**.
 - `"$1"` é o arquivo da mensagem e `"$2"` é a origem (`message`, `merge`, `squash`,
   `commit`…), que o git passa para o hook.
 
-Para **desinstalar**, apague essas duas linhas do `prepare-commit-msg`.
+Com o questionário ligado, o `init` também cria (ou troca, se você confirmar) o script no
+`package.json`:
+
+```json
+"scripts": {
+  "commit": "git commit --no-edit"
+}
+```
+
+Sem `-m`, o `--no-edit` faz o git usar a mensagem que o hook gravou, sem abrir o editor.
+
+Para **desinstalar**, apague essas duas linhas do `prepare-commit-msg` e o script `commit`.

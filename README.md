@@ -8,7 +8,7 @@ nova na hora, inclusive como subtarefa, a partir do commit.
 ◆ jira-commit  ABDP · develop
 │ feat(home): adiciona card de benefício
 
-◆ Qual atividade é esse commit?
+◆ Qual atividade é esse commit? · digite para buscar
   + Criar nova atividade
   ⋯ Ver outros status
   ✎ Digitar a chave
@@ -28,9 +28,9 @@ feat(home): adiciona card de benefício   →   feat(home): ABDP-2411 adiciona c
 
 ```bash
 npm i -D git+https://github.com/alwspiderc/jira-commit-cli.git   # no repositório
-npx jira-commit login     # uma vez por máquina: URL, e-mail e API token
-npx jira-commit init      # uma vez por repo: cria .jira-commit.json, o hook e o npm run commit
-npm run commit            # pelo terminal: tipo, escopo, descrição e a atividade do Jira
+npx --no-install jira-commit login   # uma vez por máquina: URL, e-mail e API token
+npx --no-install jira-commit init    # uma vez por repo: .jira-commit.json, hook e npm run commit
+npm run commit                       # pelo terminal: tipo, escopo, descrição e atividade do Jira
 ```
 
 Commite o `.jira-commit.json` gerado: ele é a configuração do time.
@@ -39,6 +39,10 @@ Commite o `.jira-commit.json` gerado: ele é a configuração do time.
 > impede publicação por engano). Ele é instalado direto deste repositório privado, então é
 > preciso ter acesso a ele no GitHub. O comando é `jira-commit`. Veja mais opções no
 > [guia de uso](docs/guia-de-uso.md#3-instalação).
+>
+> **Sempre use `npx --no-install`.** Existe um pacote público **diferente** chamado
+> `jira-commit` no npm. Sem o `--no-install`, se a CLI não estiver instalada no projeto, o
+> npx oferece baixar esse outro pacote, que pediria as suas credenciais do Jira.
 
 ## Comandos
 
@@ -58,6 +62,8 @@ Commite o `.jira-commit.json` gerado: ele é a configuração do time.
   `npm run commit` commita sem abrir o editor.
 - **Menos espera:** a busca no Jira e a sugestão de descrição por IA rodam enquanto você
   responde, e o menu já começa na atividade do último commit da branch.
+- **Busca pelo título:** digite no menu para filtrar as suas atividades na hora e achar
+  outras do projeto inteiro, de qualquer responsável, sem precisar saber a chave.
 - **Árvore de tarefas e subtarefas**, com o status colorido e a família da branch no topo.
 - **Filtro por status** com os nomes como aparecem na tela do Jira (traduzidos).
 - **Criação de subtarefa no commit:**
