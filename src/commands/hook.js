@@ -14,6 +14,9 @@ import {
   issueTypes,
   getTransitions,
   transitionIssue,
+  storyPointsField,
+  activeSprint,
+  moveToSprint,
 } from '../jira.js';
 import { currentBranch, stagedFiles, stagedDiff, recentSubjects } from '../git.js';
 import { commitDescription } from '../adf.js';
@@ -98,7 +101,7 @@ function prefetchIssues(cfg) {
 }
 
 /** Cartão final: atividade, o que foi criado/movido, a mensagem nova e o link. */
-function summaryCard({ key, title, created, parentKey, movedTo }, message) {
+function summaryCard({ key, title, created, parentKey, movedTo, sprint, points }, message) {
   let link;
   try {
     link = `${loadCredentials().baseUrl}/browse/${key}`;
@@ -108,6 +111,8 @@ function summaryCard({ key, title, created, parentKey, movedTo }, message) {
 
   const details = [
     created && (parentKey ? `nova subtarefa de ${c.key(parentKey)}` : 'nova atividade'),
+    sprint && c.accent(sprint),
+    points && `${points} pts`,
     movedTo && `status ${c.accent(movedTo)}`,
   ].filter(Boolean);
 
@@ -352,7 +357,7 @@ async function createFromCommit(cfg, commit, issues, keyRegex) {
         value: SUBTASK,
         description: 'Fica embaixo de uma tarefa existente e herda sprint, labels e componentes',
       },
-      { name: `▣ ${cfg.issueType}`, value: TASK, description: 'Tarefa nova, sem pai' },
+      { name: `▣ ${cfg.issueType}`, value: TASK, description: 'Tarefa nova, sem pai, já na sprint ativa' },
     ],
   });
 
@@ -362,6 +367,16 @@ async function createFromCommit(cfg, commit, issues, keyRegex) {
     if (!chosen) return null;
     parent = await withSpinner(`Carregando ${chosen.key}…`, () => getIssue(chosen.key));
   }
+
+  // Rodam enquanto a pessoa escreve o título. Tarefa sem pai vai para a sprint ativa (subtarefa já
+  // segue a do pai); se a busca falhar, a tarefa só fica sem sprint, como antes.
+  const issueTypePromise = parent ? subtaskTypeName(cfg) : Promise.resolve(cfg.issueType);
+  issueTypePromise.catch(() => {}); // o erro aparece no await abaixo; sem isso o Node encerraria antes
+  const sprintLookup = parent ? Promise.resolve(null) : activeSprint(cfg.projectKey).catch(() => null);
+  const pointsLookup =
+    cfg.storyPoints === false
+      ? Promise.resolve(null)
+      : issueTypePromise.then((type) => storyPointsField(cfg.projectKey, type)).catch(() => null);
 
   // Título: prefixo do produto + sugestão da IA (ou o texto do commit), tudo editável
   const files = stagedFiles();
@@ -383,8 +398,12 @@ async function createFromCommit(cfg, commit, issues, keyRegex) {
     })
   ).trim();
 
-  const issueType = parent ? await subtaskTypeName(cfg) : cfg.issueType;
-  const where = parent ? `subtarefa de ${c.key(parent.key)}` : `${issueType} em ${c.key(cfg.projectKey)}`;
+  const issueType = await issueTypePromise;
+  const storyPoints = await askStoryPoints(await pointsLookup);
+  const sprint = await sprintLookup;
+  const where = parent
+    ? `subtarefa de ${c.key(parent.key)}`
+    : `${issueType} em ${c.key(cfg.projectKey)}${sprint ? ` na ${c.accent(sprint.name)}` : ''}`;
   const ok = await confirm({ message: `Criar ${where}?`, default: true });
   if (!ok) return null;
 
@@ -404,13 +423,49 @@ async function createFromCommit(cfg, commit, issues, keyRegex) {
         // o sprint o Jira herda do pai sozinho; labels e componentes, não
         labels: parent?.labels,
         components: parent?.components,
+        storyPoints,
       }),
     { done: (k) => `${c.key(k)} criada no Jira` },
   );
   if (parent) setRepoState({ lastParent: parent.key });
 
+  const inSprint = sprint && (await addToSprint(sprint, key));
   const movedTo = await chooseInitialStatus(key);
-  return { key, title: summary, created: true, parentKey: parent?.key, movedTo };
+  return {
+    key,
+    title: summary,
+    created: true,
+    parentKey: parent?.key,
+    movedTo,
+    sprint: inSprint ? sprint.name : null,
+    points: storyPoints?.value,
+  };
+}
+
+/** Estimativa opcional, só se o tipo tiver o campo na tela de criação. Devolve { field, value } ou null. */
+async function askStoryPoints(field) {
+  if (!field) return null;
+  const value = await select({
+    message: `Story points ${c.dim('· opcional')}`,
+    choices: [
+      { name: c.dim('— sem estimativa'), short: 'sem estimativa', value: null },
+      ...[1, 2, 3, 5, 8, 13].map((n) => ({ name: String(n), value: n })),
+    ],
+  });
+  return value === null ? null : { field, value };
+}
+
+/** Põe a tarefa nova na sprint ativa. Se falhar, ela continua criada (fica no backlog). */
+async function addToSprint(sprint, key) {
+  try {
+    await withSpinner(`Colocando na ${sprint.name}…`, () => moveToSprint(sprint.id, key), {
+      done: `${c.key(key)} na ${c.accent(sprint.name)}`,
+    });
+    return true;
+  } catch (err) {
+    log.warn(`Não consegui colocar na ${sprint.name} (${err.message}). A atividade ficou no backlog.`);
+    return false;
+  }
 }
 
 /** Pai da subtarefa: as tarefas da árvore atual, com a última usada pré-selecionada. */

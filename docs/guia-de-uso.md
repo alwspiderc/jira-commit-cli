@@ -377,14 +377,35 @@ título da tarefa pai **antes do ` | `**:
 
 Para uma **tarefa sem pai**, o `{product}` é o produto que mais aparece nas suas atividades.
 
-**4. Confirmação**
+**4. Story points** (opcional)
 
 ```text
-◆ Criar subtarefa de LOJA-2375? (Y/n)
-✔ LOJA-2423 criada no Jira
+◆ Story points · opcional
+❯ — sem estimativa
+  1
+  2
+  3
+  ...
 ```
 
-**5. Status inicial**
+Vai para o campo de estimativa do Jira ("Story point estimate" ou "Story Points"). Enter
+direto deixa sem estimativa. A pergunta só aparece se o tipo de atividade tiver o campo na
+tela de criação, e some com `"storyPoints": false` no `.jira-commit.json`.
+
+**5. Confirmação**
+
+```text
+◆ Criar Mobile em LOJA na quadro Sprint 62? (Y/n)
+✔ LOJA-2423 criada no Jira
+✔ LOJA-2423 na quadro Sprint 62
+```
+
+Uma **tarefa sem pai** entra sozinha na **sprint ativa** do quadro do projeto, para aparecer
+no quadro como as criadas pelo Jira web. Uma subtarefa segue a sprint da tarefa pai. Se o
+projeto não tiver sprint ativa (ex.: quadro Kanban), ou se não der para mover, a tarefa fica
+no backlog e o commit segue.
+
+**6. Status inicial**
 
 ```text
 ◆ Status de LOJA-2423
@@ -398,14 +419,14 @@ Para uma **tarefa sem pai**, o `{product}` é o produto que mais aparece nas sua
 As opções são as transições que o workflow do Jira permite a partir do status inicial.
 Se a mudança de status falhar, a atividade continua criada e o commit segue.
 
-**6. Resumo**
+**7. Resumo**
 
 No fim aparece um cartão com o que aconteceu e o link para abrir a atividade no Jira:
 
 ```text
 ╭─ ✔ Atividade criada e vinculada ───────────────────────────────────╮
 │ LOJA-2423  LOJA DO BAIRRO | Mobile: Criar card de benefício na Home │
-│ nova subtarefa de LOJA-2375  ·  status Em andamento                 │
+│ nova subtarefa de LOJA-2375  ·  3 pts  ·  status Em andamento       │
 │                                                                     │
 │ feat(home): LOJA-2423 adiciona card de benefício                    │
 │ ↗ https://suaempresa.atlassian.net/browse/LOJA-2423                        │
@@ -425,7 +446,9 @@ mensagem final e o link.
 | Responsável | Você |
 | Descrição | Corpo do commit (linhas depois da primeira e o que foi preenchido em **¶ Adicionar corpo / BREAKING CHANGE**) + lista **Arquivos alterados** (`git diff --cached --name-status`) |
 | Labels e componentes | Copiados da tarefa pai |
-| Sprint | Herdado da tarefa pai pelo próprio Jira |
+| Sprint | Tarefa: a sprint ativa do quadro do projeto (sem sprint ativa, fica no backlog). Subtarefa: a da tarefa pai, pelo próprio Jira |
+| Story points | O que você escolheu no passo 4 (ou vazio) |
+| Épico (pai da tarefa) | Nenhum: a CLI não liga a tarefa a um épico. Se o time usa épicos, ligue no Jira web |
 
 ## 9. Sugestão de título por IA
 

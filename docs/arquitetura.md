@@ -74,9 +74,11 @@ tipo? ── subtarefa ── chooseParent() ── getIssue(pai)   (labels, com
           │
           ├─ stagedFiles() + stagedDiff() ── suggestTitle()   (null se IA desligada/falhou)
           ├─ resolvePrefix(summaryPrefix, productOf(pai) | mostCommonProduct(issues))
-          ├─ input(título, prefill editável) → confirm
-          ├─ createIssue({ parentKey, description: commitDescription(...), labels, components })
+          ├─ (em paralelo) activeSprint() só p/ tarefa  +  storyPointsField(tipo)
+          ├─ input(título, prefill editável) → askStoryPoints() → confirm
+          ├─ createIssue({ parentKey, description: commitDescription(...), labels, components, storyPoints })
           ├─ setRepoState({ lastParent })
+          ├─ tarefa? ── moveToSprint(sprint ativa)   (falha não aborta: fica no backlog)
           └─ chooseInitialStatus() ── getTransitions() → transitionIssue()   (falha não aborta)
 ```
 
@@ -95,6 +97,9 @@ Todos ficam na API REST v3, com autenticação Basic (`email:token` em base64) e
 | `createIssue` | `POST /rest/api/3/issue` | Cria tarefa ou subtarefa |
 | `getTransitions` | `GET /rest/api/3/issue/{key}/transitions` | Opções de status inicial |
 | `transitionIssue` | `POST /rest/api/3/issue/{key}/transitions` | Aplica o status escolhido |
+| `storyPointsField` | `GET /rest/api/3/issue/createmeta/{key}/issuetypes/{id}` | Acha o campo de estimativa da tela de criação do tipo |
+| `activeSprint` | `GET /rest/agile/1.0/board?projectKeyOrId={key}` e `GET /rest/agile/1.0/board/{id}/sprint?state=active` | Sprint ativa do primeiro quadro do projeto que tiver uma |
+| `moveToSprint` | `POST /rest/agile/1.0/sprint/{id}/issue` | Põe a tarefa nova na sprint ativa |
 
 Campos pedidos na busca: `summary,status,issuetype,parent`. O `parent` só é considerado
 quando `issuetype.subtask` é verdadeiro. O pai de uma tarefa comum é o épico, que não
@@ -152,8 +157,12 @@ editor. É isso que o `npm run commit` usa.
 **Descrição em ADF.** A API v3 rejeita texto puro em `description`. O `adf.js` monta só o
 necessário: parágrafos, um título e uma lista com marcação de código.
 
-**Sprint não é enviado.** O Jira copia sozinho o sprint do pai para a subtarefa. Enviar o
-campo exigiria descobrir o `customfield` de sprint de cada instância.
+**Sprint pela API de sprints, depois de criar.** A subtarefa segue a sprint do pai sozinha.
+A tarefa sem pai, criada sem sprint, ficava só no backlog e não aparecia no quadro. Agora ela
+é movida para a sprint ativa com `POST /rest/agile/1.0/sprint/{id}/issue`, depois de criada:
+isso dispensa descobrir o `customfield` de sprint de cada instância e, se falhar, a tarefa
+continua criada (fica no backlog) e o commit segue. A sprint ativa e o campo de story points
+são buscados enquanto a pessoa escreve o título.
 
 **IA tolerante a falhas.** `suggestTitle()` e `suggestSubject()` nunca lançam erro. Qualquer falha (sem chave,
 timeout de 8s, recusa, erro de rede) devolve `null`, e o fluxo usa o texto do commit. O
