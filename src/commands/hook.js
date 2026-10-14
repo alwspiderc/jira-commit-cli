@@ -25,7 +25,7 @@ import { commitDescription } from '../adf.js';
 import { suggestTitle, suggestSubject, aiEnabled } from '../ai.js';
 import { askCommit, askDetails, detailLines, normalize } from '../message.js';
 import { buildTree, treeLines } from '../tree.js';
-import { select, searchSelect, input, confirm, Separator, c, icon, log, header, withSpinner, card } from '../ui.js';
+import { select, searchSelect, input, field, confirm, Separator, c, icon, log, header, withSpinner, card } from '../ui.js';
 
 const OTHER_STATUSES = '__other__';
 const NEW = '__new__';
@@ -131,7 +131,7 @@ function summaryCard({ key, title, created, parentKey, movedTo, epic, sprint, po
 /** Pede a 1ª linha do commit. Com {prefix} no format (commitlint), exige "tipo(escopo): descrição". */
 async function askMessage(cfg) {
   const conventional = cfg.format.includes('{prefix}');
-  const message = await input({
+  const message = await field({
     message: `Mensagem do commit ${c.dim(conventional ? '· ex.: feat(home): adiciona card' : '· ex.: adiciona card')}`,
     validate: (v) => {
       if (!v.trim()) return 'A mensagem não pode ficar vazia';
@@ -399,7 +399,7 @@ async function createFromCommit(cfg, commit, issues, keyRegex) {
   const prefix = resolvePrefix(cfg.summaryPrefix, parent ? productOf(parent.summary) : mostCommonProduct(issues));
 
   const summary = (
-    await input({
+    await field({
       message: suggestion ? `Título ${c.dim('· sugerido pela IA')}` : 'Título',
       default: prefix + (suggestion ?? commit.subject),
       prefill: 'editable',

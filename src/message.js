@@ -1,6 +1,6 @@
 // Questionário do commit: tipo, escopo e descrição, com tipos e escopos do .jira-commit.json.
 // Corpo e BREAKING CHANGE são opcionais e ficam num atalho do menu de atividades.
-import { search, input, Separator, c, withSpinner } from './ui.js';
+import { search, field, Separator, c, withSpinner } from './ui.js';
 
 const NO_SCOPE = '__none__';
 
@@ -42,7 +42,7 @@ export async function askCommit(cfg, opts, suggestion) {
     ? await withSpinner('Pedindo uma sugestão de descrição à IA…', () => suggestion)
     : null;
 
-  const subject = await input({
+  const subject = await field({
     message: `Descrição ${c.dim(suggested ? '· sugerida pela IA' : `· ${c.accent(prefix.trim())} …`)}`,
     default: suggested?.slice(0, max) ?? undefined,
     prefill: 'editable',
@@ -59,14 +59,14 @@ export async function askCommit(cfg, opts, suggestion) {
 /** Corpo (com "|" quebrando linha, como no cz) e BREAKING CHANGE. Atualiza details no lugar. */
 export async function askDetails(details) {
   details.body = (
-    await input({
+    await field({
       message: `Corpo ${c.dim('· use | para quebrar linha, vazio para nenhum')}`,
       default: details.body || undefined,
       prefill: 'editable',
     })
   ).trim();
   details.breaking = (
-    await input({
+    await field({
       message: `BREAKING CHANGE ${c.dim('· o que deixa de ser compatível, vazio para nenhum')}`,
       default: details.breaking || undefined,
       prefill: 'editable',
