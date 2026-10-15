@@ -579,6 +579,8 @@ Para comentar junto com um commit, use a ação **❝ Comentar na atividade** do
 |---|---|
 | A mensagem já tem a chave (ex.: digitada no cz ou com `-m "... LOJA-12 ..."`) | Não faz nada |
 | `git commit --amend`, merge ou squash | Não faz nada |
+| `JIRA_COMMIT_SKIP=1 git commit …` | Não faz nada. Útil em rebase, scripts e CI |
+| Branch com chave (ex.: `feature/LOJA-12-login`) e `"autoLinkBranch": true` | Vincula direto à chave da branch, sem abrir o menu |
 | Commit por **cliente gráfico** (botão de commit do VS Code, GitHub Desktop…) | O hook é **pulado**, porque não há terminal para mostrar o menu |
 | Jira fora do ar ou sem rede | Mostra um aviso e pede a chave manualmente (vazio = pular) |
 | Ctrl+C no menu | **Cancela o commit** (nada é commitado, e o stage fica como estava) |

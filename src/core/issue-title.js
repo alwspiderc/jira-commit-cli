@@ -1,4 +1,4 @@
-const PRODUCT_SEPARATOR = ' | ';
+export const DEFAULT_PRODUCT_SEPARATOR = ' | ';
 
 export function capitalizeTitle(title, prefix = '') {
   const head = prefix && title.startsWith(prefix) ? prefix : '';
@@ -11,15 +11,15 @@ export function resolvePrefix(template, product) {
   return product ? template.replace('{product}', product) : '';
 }
 
-export function productOf(summary = '') {
-  const idx = summary.indexOf(PRODUCT_SEPARATOR);
+export function productOf(summary = '', separator = DEFAULT_PRODUCT_SEPARATOR) {
+  const idx = summary.indexOf(separator);
   return idx > 0 ? summary.slice(0, idx).trim() : '';
 }
 
-export function mostCommonProduct(issues) {
+export function mostCommonProduct(issues, separator = DEFAULT_PRODUCT_SEPARATOR) {
   const count = new Map();
   for (const i of issues) {
-    const p = productOf(i.summary);
+    const p = productOf(i.summary, separator);
     if (p) count.set(p, (count.get(p) ?? 0) + 1);
   }
   const [best] = [...count.entries()].sort((a, b) => b[1] - a[1]);

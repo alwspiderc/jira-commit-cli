@@ -50,6 +50,10 @@ Exemplo completo (projeto loja-do-bairro-mobile):
 | `ai` | boolean | `true` | `false` desliga as sugestões por IA (descrição do commit e título da atividade) neste repositório |
 | `aiModel` | string | `"claude-opus-5-5"` | Modelo da sugestão por IA. Ex.: `"claude-haiku-5-5"` para respostas mais rápidas |
 | `storyPoints` | boolean | `true` | `false` não pergunta a estimativa (story points) ao criar uma atividade |
+| `storyPointsScale` | number[] | `[1, 2, 3, 5, 8, 13]` | Opções de story points oferecidas ao criar uma atividade |
+| `productSeparator` | string | `" \| "` | O que separa o produto do resto do título (`LOJA DO BAIRRO \| Mobile: …`). Usado pelo `{product}` do `summaryPrefix` e para apagar o produto nas listas |
+| `boardId` | number | *(o primeiro quadro com sprint ativa)* | Quadro de onde vem a sprint ativa das tarefas criadas. Útil quando o projeto tem vários quadros |
+| `autoLinkBranch` | boolean | `false` | `true`: se o nome da branch tem uma chave (ex.: `feature/LOJA-12-login`), o commit é vinculado direto a ela, sem abrir o menu |
 | `commit` | object \| `false` | *(sem questionário)* | Liga as perguntas de tipo, escopo e descrição no commit. Veja abaixo. `false` = o `init` não oferece de novo |
 
 ### `commit`
@@ -166,6 +170,12 @@ editar.
 | `lastEpic` | Último épico escolhido ao criar uma tarefa (`null` = "sem épico"). Vem selecionado na próxima vez |
 
 Apagar o arquivo só faz a CLI "esquecer" a última tarefa pai e as últimas atividades.
+
+## Pular o hook
+
+| Variável | Efeito |
+|---|---|
+| `JIRA_COMMIT_SKIP=1` | O hook não faz nada: nem pergunta nem mexe na mensagem. Útil em rebase, scripts e CI. Ex.: `JIRA_COMMIT_SKIP=1 git commit -m "wip"` |
 
 ## IA
 

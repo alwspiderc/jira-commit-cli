@@ -6,10 +6,10 @@ import { c } from './theme.js';
 
 export const LAST_TAG = c.ok('★ última usada');
 
-export function issueChoices(issues, branchKey, lastKey) {
+export function issueChoices(issues, { branchKey, lastKey, productSeparator } = {}) {
   if (!issues.length) return [notice('Nenhuma atividade encontrada nesses status')];
 
-  return treeLines(buildTree(issues, branchKey), { gutter: 2 }).map((l) =>
+  return treeLines(buildTree(issues, branchKey), { gutter: 2, productSeparator }).map((l) =>
     l.selectable
       ? {
           name: l.text,

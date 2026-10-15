@@ -9,7 +9,7 @@ import { getRepoState, setRepoState } from '../infra/storage/repo-state.js';
 import { findMyIssues } from '../services/issues.js';
 import { inBackground } from '../utils/promise.js';
 import { BACK, c, header, log, summaryCard } from '../ui/index.js';
-import { chooseIssue } from '../flows/choose-issue.js';
+import { chooseIssue, linkBranchIssue } from '../flows/choose-issue.js';
 import { askCommit, askMessage } from '../flows/commit-questions.js';
 import { postComment } from '../flows/comment.js';
 
@@ -17,7 +17,7 @@ const READY_SOURCES = ['merge', 'squash', 'commit'];
 
 export async function hook(msgFile, source) {
   if (!msgFile) throw new Error('Uso: jira-commit hook <arquivo-msg> [origem]');
-  if (READY_SOURCES.includes(source)) return;
+  if (READY_SOURCES.includes(source) || process.env.JIRA_COMMIT_SKIP === '1') return;
 
   const cfg = loadProjectConfig();
   const keyRegex = issueKeyRegex(cfg.projectKey);
@@ -28,7 +28,8 @@ export async function hook(msgFile, source) {
   const context = firstLine ? c.accent(firstLine) : c.dim('(mensagem vazia)');
   header(`${cfg.projectKey} · ${branch}`, `${context}  ${c.dim('· esc volta ao passo anterior')}`);
 
-  const prefetch = inBackground(findMyIssues(cfg));
+  const branchKey = cfg.autoLinkBranch ? branch.match(keyRegex)?.[0] : null;
+  const prefetch = branchKey ? null : inBackground(findMyIssues(cfg));
   const opts = !firstLine && commitOptions(cfg);
   const suggestion =
     opts && aiEnabled(cfg)
@@ -55,7 +56,9 @@ export async function hook(msgFile, source) {
       if (keyRegex.test(firstLine)) return;
     }
     commit.subject = splitConventional(firstLine).subject;
-    result = await chooseIssue(cfg, { commit, keyRegex, branch, prefetch });
+    result = branchKey
+      ? await linkBranchIssue(branchKey)
+      : await chooseIssue(cfg, { commit, keyRegex, branch, prefetch });
     if (result !== BACK) break;
   }
 

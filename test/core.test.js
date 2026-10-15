@@ -88,6 +88,11 @@ describe('issue-title', () => {
     const issues = [{ summary: 'A | x' }, { summary: 'B | y' }, { summary: 'B | z' }, { summary: 'nada' }];
     assert.equal(mostCommonProduct(issues), 'B');
   });
+
+  it('usa o separador de produto configurado', () => {
+    assert.equal(productOf('APP - Mobile: x', ' - '), 'APP');
+    assert.equal(mostCommonProduct([{ summary: 'X / a' }, { summary: 'X / b' }], ' / '), 'X');
+  });
 });
 
 describe('issue-tree', () => {

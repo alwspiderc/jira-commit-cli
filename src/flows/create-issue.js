@@ -42,7 +42,7 @@ export async function createFromCommit(cfg, commit, issues, keyRegex) {
     {
       key: 'storyPoints',
       when: async (s) => Boolean(await lookupsFor(parentOf(s)).pointsField),
-      run: async (s) => askStoryPoints(await lookupsFor(parentOf(s)).pointsField),
+      run: async (s) => askStoryPoints(await lookupsFor(parentOf(s)).pointsField, cfg.storyPointsScale),
     },
     {
       run: async (s) => {
@@ -123,7 +123,7 @@ function startLookups(cfg, parent) {
   const issueType = inBackground(parent ? subtaskTypeName(cfg) : Promise.resolve(cfg.issueType));
   return {
     issueType,
-    sprint: parent ? Promise.resolve(null) : activeSprint(cfg.projectKey).catch(() => null),
+    sprint: parent ? Promise.resolve(null) : activeSprint(cfg.projectKey, cfg.boardId).catch(() => null),
     pointsField:
       cfg.storyPoints === false
         ? Promise.resolve(null)
@@ -141,7 +141,10 @@ function suggestTitleFor(cfg, { commit, parent, files }) {
 }
 
 async function askTitle(cfg, { commit, issues, parent, suggestion }) {
-  const prefix = resolvePrefix(cfg.summaryPrefix, parent ? productOf(parent.summary) : mostCommonProduct(issues));
+  const product = parent
+    ? productOf(parent.summary, cfg.productSeparator)
+    : mostCommonProduct(issues, cfg.productSeparator);
+  const prefix = resolvePrefix(cfg.summaryPrefix, product);
   const title = await field({
     message: suggestion ? `Título ${c.dim('· sugerido pela IA')}` : 'Título',
     default: capitalizeTitle(prefix + (suggestion ?? commit.subject), prefix),

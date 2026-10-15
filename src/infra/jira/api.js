@@ -95,9 +95,11 @@ export async function storyPointsField(projectKey, issueTypeName) {
   return (points.find((f) => /estimate/i.test(f.name)) ?? points[0])?.fieldId ?? null;
 }
 
-export async function activeSprint(projectKey) {
-  const boards = await request(`/rest/agile/1.0/board?projectKeyOrId=${enc(projectKey)}`);
-  for (const board of boards.values ?? []) {
+export async function activeSprint(projectKey, boardId) {
+  const boards = boardId
+    ? [{ id: boardId }]
+    : ((await request(`/rest/agile/1.0/board?projectKeyOrId=${enc(projectKey)}`)).values ?? []);
+  for (const board of boards) {
     try {
       const sprints = await request(`/rest/agile/1.0/board/${board.id}/sprint?state=active`);
       if (sprints.values?.length) return { id: sprints.values[0].id, name: sprints.values[0].name };

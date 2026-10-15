@@ -17,7 +17,7 @@ export async function list(args = []) {
     return;
   }
 
-  for (const l of treeLines(buildTree(issues))) console.log(l.text);
+  for (const l of treeLines(buildTree(issues), { productSeparator: cfg.productSeparator })) console.log(l.text);
 
   console.log();
   const limitHit = issues.length >= cfg.maxResults;

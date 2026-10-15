@@ -1,5 +1,6 @@
 import { matchIssues } from '../core/issue-match.js';
 import { projectSearchJql } from '../core/jql.js';
+import { getIssue } from '../infra/jira/api.js';
 import { getRepoState } from '../infra/storage/repo-state.js';
 import { findMyIssues, searchProject } from '../services/issues.js';
 import { BACK, c, issueChoices, LAST_TAG, log, notice, searchSelect, section, withSpinner } from '../ui/index.js';
@@ -78,6 +79,16 @@ export async function chooseIssue(cfg, { commit, keyRegex, branch, prefetch }) {
   }
 }
 
+export async function linkBranchIssue(key) {
+  try {
+    const { summary } = await withSpinner(`Vinculando ${key}, da branch…`, () => getIssue(key));
+    return { key, title: summary };
+  } catch (err) {
+    log.warn(`Não consegui conferir ${key} no Jira (${err.message}). Vinculando mesmo assim.`);
+    return { key };
+  }
+}
+
 function loadIssues(cfg, all, prefetch) {
   return withSpinner(
     all ? 'Buscando todas as suas atividades abertas…' : 'Buscando suas atividades no Jira…',
@@ -86,7 +97,7 @@ function loadIssues(cfg, all, prefetch) {
 }
 
 function issueMenu({ cfg, commit, branchKey, lastKey, found }, issues, all) {
-  const taskChoices = issueChoices(issues, branchKey, lastKey);
+  const taskChoices = issueChoices(issues, { branchKey, lastKey, productSeparator: cfg.productSeparator });
   const lastChoice =
     lastKey && lastKey !== branchKey && !issues.some((i) => i.key === lastKey)
       ? [{ name: `${c.key(lastKey)}  ${LAST_TAG}`, short: lastKey, value: lastKey }]
@@ -171,12 +182,13 @@ export function searchResults(term, remote, { cfg, issues, branchKey, lastKey, a
   const searching = remote.status === 'loading' && Boolean(projectSearchJql(cfg.projectKey, term));
   const failed = remote.status === 'error';
   const nothing = !mine.length && !others.length && !searching && !failed;
+  const choicesOf = (list, marks) => issueChoices(list, { ...marks, productSeparator: cfg.productSeparator });
 
   return [
-    ...(mine.length ? [section(`── suas atividades (${mine.length})`), ...issueChoices(mine, branchKey, lastKey)] : []),
+    ...(mine.length ? [section(`── suas atividades (${mine.length})`), ...choicesOf(mine, { branchKey, lastKey })] : []),
     ...(searching ? [section('── buscando no projeto…')] : []),
     ...(failed ? [section('── não consegui buscar no projeto')] : []),
-    ...(others.length ? [section(`── outras no projeto (${others.length})`), ...issueChoices(others)] : []),
+    ...(others.length ? [section(`── outras no projeto (${others.length})`), ...choicesOf(others)] : []),
     ...(nothing ? [notice('Nenhuma atividade encontrada')] : []),
     ...(actions.length ? [section('── ações'), ...actions] : []),
   ];

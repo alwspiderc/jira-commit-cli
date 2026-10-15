@@ -3,7 +3,7 @@ import { truncate } from '../utils/text.js';
 
 const STATUS_COLORS = { new: 'blue', indeterminate: 'yellow', done: 'green' };
 
-export function treeLines(families, { width = process.stdout.columns || 100, gutter = 0 } = {}) {
+export function treeLines(families, { width = process.stdout.columns || 100, gutter = 0, productSeparator = ' | ' } = {}) {
   const all = families.flatMap((f) => [f.root, ...f.children]);
   if (!all.length) return [];
   const keyWidth = Math.max(...all.map((i) => i.key.length));
@@ -14,7 +14,7 @@ export function treeLines(families, { width = process.stdout.columns || 100, gut
     const max = summaryWidth - branch.length;
     const summary = truncate(issue.summary.trim(), max).padEnd(max);
     const key = styleText(selectable ? ['bold', 'cyan'] : 'dim', issue.key.padEnd(keyWidth));
-    const title = selectable ? dimProduct(summary) : styleText('dim', summary);
+    const title = selectable ? dimProduct(summary, productSeparator) : styleText('dim', summary);
     return `${styleText('dim', branch)}${key}  ${title}  ${statusTag(issue)}`;
   };
 
@@ -33,7 +33,9 @@ function statusTag(issue) {
   return styleText(STATUS_COLORS[issue.statusCategory] ?? 'gray', issue.status ?? '');
 }
 
-function dimProduct(summary) {
-  const sep = summary.indexOf(' | ');
-  return sep < 0 ? summary : styleText('dim', summary.slice(0, sep + 3)) + summary.slice(sep + 3);
+function dimProduct(summary, separator) {
+  const idx = summary.indexOf(separator);
+  if (idx <= 0) return summary;
+  const end = idx + separator.length;
+  return styleText('dim', summary.slice(0, end)) + summary.slice(end);
 }

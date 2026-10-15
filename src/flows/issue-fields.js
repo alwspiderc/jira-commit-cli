@@ -9,7 +9,6 @@ export const KIND = { SUBTASK: '__subtask__', TASK: '__task__' };
 
 const MANUAL = '__manual__';
 const NO_EPIC = '__no_epic__';
-const STORY_POINTS = [1, 2, 3, 5, 8, 13];
 const PAGE_SIZE = 15;
 
 export function chooseKind(cfg) {
@@ -87,13 +86,13 @@ export async function chooseEpic({ epics, suggested, why }) {
   return choice === NO_EPIC ? null : epics.find((e) => e.key === choice);
 }
 
-export async function askStoryPoints(field) {
+export async function askStoryPoints(field, scale) {
   if (!field) return null;
   const value = await select({
     message: `Story points ${c.dim('· opcional')}`,
     choices: [
       { name: c.dim('— sem estimativa'), short: 'sem estimativa', value: null },
-      ...STORY_POINTS.map((n) => ({ name: String(n), value: n })),
+      ...scale.map((n) => ({ name: String(n), value: n })),
     ],
     back: true,
   });
