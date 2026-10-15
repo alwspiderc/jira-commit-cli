@@ -24,7 +24,6 @@ export function currentBranch() {
   }
 }
 
-/** Arquivos no stage, ex.: ["M src/home/Header.tsx", "A src/home/Card.tsx"]. */
 export function stagedFiles() {
   try {
     return git('diff --cached --name-status')
@@ -36,10 +35,6 @@ export function stagedFiles() {
   }
 }
 
-/**
- * Descrições dos últimos commits, sem "tipo(escopo):" e sem chave de issue: exemplos de estilo
- * para a IA. Só entram commits no formato Conventional (ficam de fora "CI: bumps version…").
- */
 export function recentSubjects(n = 10) {
   try {
     return git(`log --no-merges -${n * 5} --format=%s`)
@@ -58,7 +53,6 @@ export function recentSubjects(n = 10) {
   }
 }
 
-/** Diff do stage, cortado em maxChars (vai para a IA, não precisa ser inteiro). */
 export function stagedDiff(maxChars = 8000) {
   try {
     const diff = execSync('git diff --cached --no-color --unified=2', {

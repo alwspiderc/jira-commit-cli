@@ -3,12 +3,13 @@ import { hook } from '../src/commands/hook.js';
 import { login } from '../src/commands/login.js';
 import { list } from '../src/commands/list.js';
 import { init } from '../src/commands/init.js';
-import { c, icon, log, VERSION } from '../src/ui.js';
+import { c, icon, log } from '../src/ui/index.js';
+import { VERSION } from '../src/version.js';
 
 const [, , command, ...args] = process.argv;
 
 const commands = {
-  hook: () => hook(args[0], args[1]), // chamado pelo git: hook <arquivo-msg> <origem>
+  hook: () => hook(args[0], args[1]),
   login,
   list: () => list(args),
   init,
@@ -45,8 +46,8 @@ if (!run) {
 try {
   await run();
 } catch (err) {
-  // Ctrl+C dentro de um prompt
-  if (err?.name === 'ExitPromptError') {
+  const cancelled = err?.name === 'ExitPromptError';
+  if (cancelled) {
     console.log();
     log.hint(command === 'hook' ? 'Cancelado. O commit não foi feito.' : 'Cancelado.');
     console.log();
@@ -54,7 +55,7 @@ try {
   }
   console.log();
   log.err(err.message);
-  if (/401/.test(err.message)) log.hint('Token inválido ou expirado? Rode: jira-commit login');
+  if (err.status === 401) log.hint('Token inválido ou expirado? Rode: jira-commit login');
   if (command === 'hook') log.hint('O commit foi cancelado. Corrija e tente de novo.');
   console.log();
   process.exit(1);

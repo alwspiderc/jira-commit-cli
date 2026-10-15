@@ -1,6 +1,8 @@
-import { saveCredentials } from '../config.js';
-import { getMyself } from '../jira.js';
-import { input, password, c, header, log, withSpinner } from '../ui.js';
+import { getMyself } from '../infra/jira/api.js';
+import { saveCredentials } from '../infra/storage/credentials.js';
+import { c, header, input, log, password, withSpinner } from '../ui/index.js';
+
+const TOKEN_PAGE = 'https://id.atlassian.com/manage-profile/security/api-tokens';
 
 export async function login() {
   header('login', c.dim('As credenciais ficam só nesta máquina, em ~/.config/jira-commit'));
@@ -10,12 +12,11 @@ export async function login() {
     validate: (v) => /^https:\/\/.+/.test(v) || 'Use a URL completa com https://',
   });
   const email = await input({ message: 'E-mail da conta Atlassian' });
-  log.hint('Gere o token em https://id.atlassian.com/manage-profile/security/api-tokens');
+  log.hint(`Gere o token em ${TOKEN_PAGE}`);
   const token = await password({ message: 'API token', mask: '•' });
 
   saveCredentials({ baseUrl: baseUrl.replace(/\/$/, ''), email, token });
 
-  // Testa na hora pra não descobrir o erro só no primeiro commit
   const me = await withSpinner('Testando a conexão…', () => getMyself());
   console.log();
   log.ok(`Conectado como ${c.bold(me.displayName)}`);

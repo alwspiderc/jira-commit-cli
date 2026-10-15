@@ -1,7 +1,3 @@
-// Select com busca: sem termo, mostra a lista com o cursor no default (como o select); ao digitar,
-// a lista é refeita na hora e, em paralelo, uma busca remota (ex.: no Jira) completa os
-// resultados quando chega. O @inquirer/search não serve aqui: ele não tem default e só mostra a
-// lista nova depois que a busca assíncrona termina, então o filtro local esperaria a rede.
 import {
   createPrompt,
   useState,
@@ -16,7 +12,7 @@ import {
   Separator,
 } from '@inquirer/core';
 
-const DEBOUNCE_MS = 300; // espera a pessoa parar de digitar antes de ir à rede
+const DEBOUNCE_MS = 300;
 
 const baseTheme = {
   icon: { cursor: '❯' },
@@ -29,29 +25,20 @@ const baseTheme = {
 
 const selectable = (item) => item && !Separator.isSeparator(item) && !item.disabled;
 
-/**
- * config.items(term, remote) → lista de opções e Separators a mostrar.
- *   term: o que foi digitado ('' = lista inicial)
- *   remote: { status: 'idle' | 'loading' | 'done' | 'error', results } da busca remota daquele termo
- * config.remote(term, { signal }) → Promise com os resultados remotos (opcional; se rejeitar, status 'error')
- * config.default: valor em que o cursor começa quando não há termo
- */
 export default createPrompt((config, done) => {
   const { pageSize = 15 } = config;
   const theme = makeTheme(baseTheme, config.theme);
   const [status, setStatus] = useState('idle');
   const [term, setTerm] = useState('');
   const [remote, setRemote] = useState({ term: '', status: 'idle', results: [] });
-  // undefined = cursor automático (default sem termo, primeira opção com termo)
   const [picked, setPicked] = useState();
 
-  // O "loading" é marcado no keypress, junto com o termo: um setState feito dentro do efeito, num
-  // render disparado por tecla, não redesenha a tela (o @inquirer/core junta as atualizações).
+  // O "loading" é marcado no keypress: um setState dentro do efeito, num render disparado por
+  // tecla, não redesenha a tela (o @inquirer/core junta as atualizações)
   useEffect(() => {
     if (!term || !config.remote) return undefined;
     const controller = new AbortController();
     const timer = setTimeout(async () => {
-      // busca remota é um extra: se falhar, fica a lista local e o status "error" para avisar
       let next;
       try {
         next = { term, status: 'done', results: await config.remote(term, { signal: controller.signal }) };
@@ -79,7 +66,7 @@ export default createPrompt((config, done) => {
         setStatus('done');
         done(selected.value);
       } else {
-        rl.write(term); // o Enter limpa a linha do readline; devolve o termo
+        rl.write(term);
       }
     } else if (isUpKey(key) || isDownKey(key)) {
       rl.clearLine(0);
@@ -88,7 +75,7 @@ export default createPrompt((config, done) => {
       let next = active;
       do next += step;
       while (next >= 0 && next < items.length && !selectable(items[next]));
-      if (selectable(items[next])) setPicked(items[next].value); // para no começo/fim da lista
+      if (selectable(items[next])) setPicked(items[next].value);
     } else if (rl.line !== term) {
       setTerm(rl.line);
       setPicked(undefined);
