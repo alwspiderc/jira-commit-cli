@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "description": "Liga cada commit a uma issue do Jira Cloud (escolhe uma existente ou cria na hora)",
+  "author": "Ester <alwesterc@gmail.com>",
   "type": "module",
   "bin": {
     "jira-commit": "bin/jira-commit.js"
