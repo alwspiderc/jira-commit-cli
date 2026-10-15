@@ -13,3 +13,12 @@ export function setScript(pkg, name, command) {
   const indent = pkg.text.match(/^[ \t]+(?=")/m)?.[0] ?? '  ';
   writeFileSync(pkg.path, JSON.stringify(pkg.json, null, indent) + (pkg.text.endsWith('\n') ? '\n' : ''));
 }
+
+export function hasDependency(json, name) {
+  return Boolean(json.dependencies?.[name] ?? json.devDependencies?.[name]);
+}
+
+export function withHusky(prepare) {
+  if (!prepare) return 'husky';
+  return /\bhusky\b/.test(prepare) ? prepare : `${prepare} && husky`;
+}

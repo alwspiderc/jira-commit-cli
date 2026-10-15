@@ -82,7 +82,8 @@ npm i --no-save git+https://github.com/alwspiderc/jira-commit-cli.git   # do git
 ```
 
 O `--no-save` não mexe no `package.json` nem no lock, mas o próximo `npm install` remove o
-pacote, e aí o commit falha até você instalar de novo. Com a pasta local, o pacote é um link,
+pacote, e aí o commit falha até você instalar de novo. Para evitar isso, o `init` oferece
+adicionar a CLI ao `package.json` ([seção 5](#5-configurar-o-repositório-uma-vez-por-repo)). Com a pasta local, o pacote é um link,
 então qualquer mudança no código da CLI vale na hora.
 
 Confira se o binário ficou disponível:
@@ -143,16 +144,32 @@ O `init` pode ser rodado de novo sem problema: ele só pergunta o que ainda falt
 Se você recusar, o `init` grava `"commit": false` e não pergunta de novo. Detalhes na
 [seção 6](#6-questionário-do-commit-tipo-escopo-e-descrição).
 
-**c) Instala o hook** `prepare-commit-msg`:
+**c) Prepara o projeto para o time** (só em projetos com `package.json`). Cada item é
+perguntado antes e só aparece se estiver faltando:
+- **jira-commit no `package.json`** (devDependency, instalada pelo git): quem rodar
+  `npm install` já fica com a CLI, e o commit não falha por falta dela;
+- **Husky**: instala o pacote, cria o script `"prepare": "husky"` (ou acrescenta `&& husky` a
+  um `prepare` que já existe) e roda o `husky` para ativar a pasta `.husky/`. Ele **não** roda
+  o `husky init`, que criaria um `pre-commit` com `npm test`;
+- o gerenciador é detectado pelo lock: `pnpm-lock.yaml` → pnpm, `yarn.lock` → yarn, senão npm;
+- se a instalação falhar (sem rede, sem acesso ao GitHub), o `init` avisa, mostra o comando
+  para rodar à mão e segue;
+- projetos com o **Husky 4** (configurado dentro do `package.json`) não são alterados.
+
+Depois, **commite o `package.json`, o lock e a pasta `.husky`**. Assim, um colega só precisa de
+`git pull` e `npm install`: o script `prepare` ativa o hook sozinho.
+
+**d) Instala o hook** `prepare-commit-msg`:
 - se o projeto usa **Husky** (tem a pasta `.husky/`), a linha é adicionada em
-  `.husky/prepare-commit-msg`;
-- senão, vai para `.git/hooks/prepare-commit-msg`;
+  `.husky/prepare-commit-msg`, que vai para o repositório;
+- senão, vai para `.git/hooks/prepare-commit-msg`, que **não** é versionado: vale só na sua
+  máquina;
 - se já existir um hook, a linha do jira-commit é **acrescentada no final**, sem apagar
   nada. Rodar o `init` de novo não duplica a linha;
 - se o hook tiver o **commitizen** (`npx cz --hook` ou `git cz --hook`) e o questionário
   estiver ligado, oferece tirar o cz, para as perguntas não aparecerem duas vezes.
 
-**d) Cria o script `npm run commit`** (`git commit --no-edit`), que faz as perguntas e
+**e) Cria o script `npm run commit`** (`git commit --no-edit`), que faz as perguntas e
 commita sem abrir o editor do git no fim. Se já existir um script `commit` (ex.: `git-cz`),
 pergunta antes de trocar.
 

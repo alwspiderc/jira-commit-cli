@@ -1,15 +1,19 @@
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
 import { commitOptions, defaultCommitSection, fromCz } from '../core/commit-options.js';
 import { commitlintReadsConfig, loadCzConfig, usesCommitlint } from '../infra/commit-tooling.js';
 import { repoRoot } from '../infra/git.js';
 import { hookHasCz, installHook } from '../infra/git-hook.js';
 import { issueTypes } from '../infra/jira/api.js';
-import { readPackage, setScript } from '../infra/package-json.js';
+import { addDevCommand, binCommand, detectPackageManager, run } from '../infra/package-manager.js';
+import { hasDependency, readPackage, setScript, withHusky } from '../infra/package-json.js';
 import {
   PROJECT_FILE,
   projectConfigExists,
   readProjectFile,
   saveProjectConfig,
 } from '../infra/storage/project-config.js';
+import { PACKAGE_NAME, REPOSITORY } from '../version.js';
 import { c, confirm, header, input, log, select, withSpinner } from '../ui/index.js';
 
 const COMMIT_SCRIPT = 'git commit --no-edit';
@@ -39,12 +43,75 @@ export async function init() {
   }
   const questions = Boolean(commitOptions(cfg));
 
+  const installed = await setupProject(root);
+
   const removeCz = questions && hookHasCz(root) && (await confirmRemoveCz());
   const { path, result } = installHook(root, { removeCz });
   log.ok(`${HOOK_MESSAGES[result]} ${c.dim(path)}`);
 
   if (questions) await commitScript(root);
-  nextSteps(questions, commitlint && !commitlintReadsConfig(root));
+  nextSteps({ questions, installed, showCommitlintSnippet: commitlint && !commitlintReadsConfig(root) });
+}
+
+async function setupProject(root) {
+  const pkg = readPackage(root);
+  if (!pkg) {
+    log.warn('Sem package.json: o hook fica só em .git/hooks e não vai para o repositório.');
+    return false;
+  }
+  const legacyHusky = Boolean(pkg.json.husky?.hooks);
+  if (legacyHusky) log.warn('O projeto usa o Husky 4 (configurado no package.json): o jira-commit não mexe nele.');
+
+  const pm = detectPackageManager(root);
+  const packages = [];
+  if (!hasDependency(pkg.json, PACKAGE_NAME) && (await confirmCli())) packages.push(REPOSITORY);
+  if (!legacyHusky && !hasDependency(pkg.json, 'husky') && (await confirmHusky())) packages.push('husky');
+  const installed = packages.length > 0 && (await installPackages(root, pm, packages));
+
+  const huskyInstalled = !legacyHusky && hasDependency(readPackage(root).json, 'husky');
+  if (huskyInstalled && !existsSync(join(root, '.husky', '_'))) await setupHusky(root, pm);
+  return installed;
+}
+
+function confirmCli() {
+  return confirm({
+    message: `Adicionar o jira-commit ao package.json? ${c.dim('· quem rodar npm install já fica com o hook funcionando')}`,
+    default: true,
+  });
+}
+
+function confirmHusky() {
+  return confirm({
+    message: `Instalar o Husky? ${c.dim('· o hook passa a ir para o repositório e vale para o time todo')}`,
+    default: true,
+  });
+}
+
+async function installPackages(root, pm, packages) {
+  const names = packages.map((p) => (p === REPOSITORY ? 'jira-commit' : p)).join(' e ');
+  const command = addDevCommand(pm, packages);
+  try {
+    await withSpinner(`Instalando ${names}…`, () => run(root, command), { done: `${names} no package.json` });
+    return true;
+  } catch (err) {
+    log.warn(`Não consegui instalar ${names} (${err.message}). Rode à mão: ${command.join(' ')}`);
+    return false;
+  }
+}
+
+// husky init não serve: ele cria um pre-commit rodando "npm test", que o projeto não pediu
+async function setupHusky(root, pm) {
+  const pkg = readPackage(root);
+  const current = pkg.json.scripts?.prepare;
+  if (withHusky(current) !== current) setScript(pkg, 'prepare', withHusky(current));
+  const command = binCommand(pm, 'husky');
+  try {
+    await withSpinner('Configurando o Husky…', () => run(root, command), {
+      done: `Husky configurado ${c.dim('· script "prepare" e pasta .husky')}`,
+    });
+  } catch (err) {
+    log.warn(`Não consegui configurar o Husky (${err.message}). Rode à mão: ${command.join(' ')}`);
+  }
 }
 
 async function askProjectConfig(commitlint) {
@@ -134,8 +201,9 @@ async function commitScript(root) {
   log.ok(`Script ${c.bold('npm run commit')} criado no package.json`);
 }
 
-function nextSteps(questions, showCommitlintSnippet) {
+function nextSteps({ questions, installed, showCommitlintSnippet }) {
   console.log();
+  if (installed) log.hint('Commite o package.json, o lock e a pasta .husky: assim o hook vale para o time todo.');
   log.hint('Pronto! No próximo git commit (pelo terminal) o menu do Jira aparece.');
   if (questions) log.hint('Para commitar sem abrir o editor no fim: npm run commit');
   log.hint('Para conferir suas atividades agora: jira-commit list');

@@ -30,11 +30,12 @@ feat(home): adiciona card de benefício   →   feat(home): LOJA-2411 adiciona c
 ```bash
 npm i -D git+https://github.com/alwspiderc/jira-commit-cli.git   # no repositório
 npx --no-install jira-commit login   # uma vez por máquina: URL, e-mail e API token
-npx --no-install jira-commit init    # uma vez por repo: .jira-commit.json, hook e npm run commit
+npx --no-install jira-commit init    # uma vez por repo: .jira-commit.json, Husky, hook e npm run commit
 npm run commit                       # pelo terminal: tipo, escopo, descrição e atividade do Jira
 ```
 
-Commite o `.jira-commit.json` gerado: ele é a configuração do time.
+Commite o `.jira-commit.json`, o `package.json`, o lock e a pasta `.husky`. Depois disso, um
+colega só precisa de `npm install` para ter a CLI e o hook funcionando.
 
 > **Uso interno.** O pacote `jira-commit-cli` não é publicado no npm (`"private": true`
 > impede publicação por engano). Ele é instalado direto deste repositório privado, então é
@@ -50,7 +51,7 @@ Commite o `.jira-commit.json` gerado: ele é a configuração do time.
 | Comando | O que faz |
 |---|---|
 | `jira-commit login` | Salva e testa as credenciais do Jira |
-| `jira-commit init` | Configura o repositório (importando tipos e escopos do `.cz-config.js`, se houver), instala o hook `prepare-commit-msg` e cria o `npm run commit` |
+| `jira-commit init` | Configura o repositório (importando tipos e escopos do `.cz-config.js`, se houver), oferece instalar o Husky e pôr a CLI no `package.json`, instala o hook `prepare-commit-msg` e cria o `npm run commit` |
 | `jira-commit list` | Lista suas atividades nos status padrão |
 | `jira-commit list --todos` | Lista todas as suas atividades abertas |
 | `jira-commit list --status "NOME"` | Lista só um status |

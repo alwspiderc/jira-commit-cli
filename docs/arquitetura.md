@@ -66,6 +66,7 @@ jira-commit-cli/
 │  │  ├─ git-hook.js            Lê e instala o prepare-commit-msg (Husky ou .git/hooks)
 │  │  ├─ commit-tooling.js      .cz-config.js e commitlint do projeto
 │  │  ├─ package-json.js        Lê o package.json e grava scripts mantendo a formatação
+│  │  ├─ package-manager.js     Detecta npm/yarn/pnpm, instala devDependencies e roda binários (Husky)
 │  │  ├─ message-file.js        Arquivo da mensagem que o git passa ao hook
 │  │  └─ ai.js                  Sugestões de título e de descrição via Claude (opcional)
 │  ├─ ui/
@@ -223,6 +224,13 @@ ao último passo que de fato perguntou algo. Passos com `when` falso, como o esc
 sem escopos ou o épico num projeto sem épicos, são pulados nos dois sentidos. O `resume` faz o
 questionário reabrir na descrição quando a pessoa volta do menu de atividades.
 
+**Husky pelo `init`, sem `husky init`.** O hook só vale para o time se estiver versionado, e
+o `.git/hooks` não é. O `init` instala o Husky, grava `"prepare": "husky"` e roda o binário
+`husky`, que cria `.husky/_` e aponta o `core.hooksPath` para lá. O `husky init` não é usado
+porque cria um `pre-commit` com `npm test`, que mudaria o commit de todo mundo sem ninguém
+pedir. A CLI entra no `package.json` pelo `repository.url` do próprio `package.json` dela
+(`src/version.js`), e todos os pacotes aprovados vão numa instalação só.
+
 **`git commit --no-edit` sem `-m`.** Sem `-m`, o git roda o `prepare-commit-msg` com o
 arquivo vazio (sem os comentários do template) e usa o que o hook gravou, sem abrir o
 editor. É isso que o `npm run commit` usa.
@@ -288,9 +296,9 @@ Nos dois casos, Ctrl+C no menu de atividades sai sem gravar a chave e não mexe 
 
 - **Commit por cliente gráfico** pula o hook (não há terminal para o menu).
 - **CLI ausente bloqueia o commit:** o hook chama `npx --no-install jira-commit`. Se a CLI
-  não estiver instalada (ex.: um colega sem ela, ou depois de um `npm install` com a
-  instalação `--no-save`), o npx falha e o commit é cancelado. Para adotar aos poucos num
-  time, todos precisam ter a CLI antes de o hook entrar no repositório.
+  não estiver instalada, o npx falha e o commit é cancelado. O `init` oferece pôr a CLI no
+  `package.json`, e aí basta um `npm install`. Sem isso (ex.: instalação `--no-save`), todos
+  precisam ter a CLI antes de o hook entrar no repositório.
 - **Nome no npm:** existe um pacote público **diferente** chamado `jira-commit`. Por isso o
   hook e a documentação usam `npx --no-install`: sem ele, o npx ofereceria baixar o outro
   pacote quando a CLI não está instalada.

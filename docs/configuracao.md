@@ -178,7 +178,9 @@ Sem nenhuma das duas, a IA fica desligada, mesmo com `"ai": true`.
 
 ## Hook instalado
 
-O `init` adiciona ao `prepare-commit-msg` (do Husky ou do `.git/hooks`):
+O `init` adiciona ao `prepare-commit-msg` (do Husky ou do `.git/hooks`). Se o projeto ainda não
+tem Husky, o `init` oferece instalar e configurar (script `"prepare": "husky"`), para o hook ir
+para o repositório:
 
 ```sh
 # jira-commit
@@ -188,7 +190,8 @@ if sh -c ": >/dev/tty" 2>/dev/null; then npx --no-install jira-commit hook "$1" 
 - `sh -c ": >/dev/tty"` testa se existe um terminal. Em clientes gráficos não existe, e o
   hook é pulado.
 - `npx --no-install` usa a CLI instalada no projeto e nunca baixa nada na hora do commit.
-  Se ela não estiver instalada, o npx falha e **o commit é cancelado**.
+  Se ela não estiver instalada, o npx falha e **o commit é cancelado**. Por isso o `init`
+  oferece adicionar a CLI como devDependency do projeto.
 - `"$1"` é o arquivo da mensagem e `"$2"` é a origem (`message`, `merge`, `squash`,
   `commit`…), que o git passa para o hook.
 
