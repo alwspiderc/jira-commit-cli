@@ -57,6 +57,7 @@ jira-commit-cli/
 │  │  ├─ issue-tree.js          Agrupa subtarefas sob o pai
 │  │  ├─ issue-match.js         Filtro local (sem acento) das atividades e das opções
 │  │  ├─ jql.js                 JQL das suas atividades e da busca no projeto
+│  │  ├─ validate.js            Valida um valor contra o schema/jira-commit.schema.json
 │  │  └─ adf.js                 Descrição em Atlassian Document Format
 │  ├─ infra/
 │  │  ├─ jira/client.js         Requisição autenticada, timeout e JiraError (com o status HTTP)
@@ -82,7 +83,8 @@ jira-commit-cli/
 │  │  └─ summary-card.js        Cartão final do hook
 │  ├─ utils/                    text.js (normalize, truncate), promise.js (inBackground), steps.js (runSteps, BACK)
 │  └─ version.js
-├─ test/core.test.js            Testes da camada core (node:test)
+├─ schema/jira-commit.schema.json  Regras do .jira-commit.json: validação e autocomplete no editor
+├─ test/                        Testes (node:test): core.test.js e infra.test.js
 └─ docs/
 ```
 
@@ -230,6 +232,13 @@ o `.git/hooks` não é. O `init` instala o Husky, grava `"prepare": "husky"` e r
 porque cria um `pre-commit` com `npm test`, que mudaria o commit de todo mundo sem ninguém
 pedir. A CLI entra no `package.json` pelo `repository.url` do próprio `package.json` dela
 (`src/version.js`), e todos os pacotes aprovados vão numa instalação só.
+
+**Um schema para validar e para o editor.** O `.jira-commit.json` é descrito num JSON Schema,
+que o editor usa para o autocomplete. O `core/validate.js` lê esse mesmo arquivo e implementa só
+o que o schema usa (`type`, `enum`, `const`, `pattern`, `minimum`, `items`, `properties`,
+`required`, `anyOf`), sem dependência nova. Assim as regras ficam num lugar só. Campo
+desconhecido é aviso, não erro, para uma config de uma versão mais nova não travar uma CLI
+antiga.
 
 **`git commit --no-edit` sem `-m`.** Sem `-m`, o git roda o `prepare-commit-msg` com o
 arquivo vazio (sem os comentários do template) e usa o que o hook gravou, sem abrir o

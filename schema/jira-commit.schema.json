@@ -1,0 +1,81 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": ".jira-commit.json",
+  "description": "Configuração do jira-commit para este repositório",
+  "type": "object",
+  "required": ["projectKey"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "projectKey": {
+      "type": "string",
+      "pattern": "^[A-Z][A-Z0-9]+$",
+      "x-hint": "ex.: APP",
+      "description": "Chave do projeto no Jira"
+    },
+    "jiraUrl": {
+      "type": "string",
+      "pattern": "^https?://",
+      "x-hint": "ex.: https://suaempresa.atlassian.net",
+      "description": "Jira deste repositório, quando você tem mais de um salvo no login"
+    },
+    "language": {
+      "enum": ["pt", "en"],
+      "description": "Idioma da CLI e das sugestões da IA"
+    },
+    "issueType": { "type": "string", "description": "Tipo usado ao criar uma tarefa sem pai" },
+    "subtaskType": { "type": "string", "description": "Tipo usado para subtarefa" },
+    "summaryPrefix": { "type": "string", "description": "Prefixo do título das atividades criadas. Aceita {product}" },
+    "productSeparator": { "type": "string", "description": "O que separa o produto do resto do título" },
+    "format": { "type": "string", "description": "Como a chave entra na 1ª linha: {key} {message} {prefix} {subject}" },
+    "statuses": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Status mostrados por padrão, com os nomes como aparecem na tela"
+    },
+    "jql": { "type": "string", "description": "JQL próprio. Substitui statuses e o filtro de responsável" },
+    "maxResults": { "type": "integer", "minimum": 1, "description": "Máximo de atividades buscadas por vez" },
+    "ai": { "type": "boolean", "description": "false desliga as sugestões por IA" },
+    "aiModel": { "type": "string", "description": "Modelo usado nas sugestões" },
+    "aiInstructions": { "type": "string", "description": "Orientação extra para as sugestões da IA" },
+    "storyPoints": { "type": "boolean", "description": "false não pergunta a estimativa" },
+    "storyPointsScale": {
+      "type": "array",
+      "items": { "type": "number", "minimum": 0 },
+      "description": "Opções de story points"
+    },
+    "boardId": { "type": "integer", "minimum": 1, "description": "Quadro de onde vem a sprint ativa" },
+    "autoLinkBranch": { "type": "boolean", "description": "Vincula direto à chave da branch, sem abrir o menu" },
+    "commit": {
+      "anyOf": [
+        { "const": false },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "types": {
+              "type": "array",
+              "items": {
+                "anyOf": [
+                  { "type": "string" },
+                  {
+                    "type": "object",
+                    "required": ["value"],
+                    "additionalProperties": false,
+                    "properties": {
+                      "value": { "type": "string" },
+                      "description": { "type": "string" }
+                    }
+                  }
+                ]
+              }
+            },
+            "scopes": { "type": "array", "items": { "type": "string" } },
+            "headerMaxLength": { "type": "integer", "minimum": 20 }
+          }
+        }
+      ],
+      "description": "Questionário do commit (tipo, escopo e descrição). false = desligado"
+    }
+  }
+}

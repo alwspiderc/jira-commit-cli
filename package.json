@@ -10,7 +10,8 @@
   },
   "files": [
     "bin",
-    "src"
+    "src",
+    "schema"
   ],
   "scripts": {
     "test": "node --test"

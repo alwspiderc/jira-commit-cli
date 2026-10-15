@@ -9,6 +9,7 @@ import { addDevCommand, binCommand, detectPackageManager, run } from '../infra/p
 import { hasDependency, readPackage, setScript, withHusky } from '../infra/package-json.js';
 import {
   PROJECT_FILE,
+  SCHEMA_REF,
   projectConfigExists,
   readProjectFile,
   saveProjectConfig,
@@ -44,6 +45,7 @@ export async function init() {
   const questions = Boolean(commitOptions(cfg));
 
   const installed = await setupProject(root);
+  linkSchema(root);
 
   const removeCz = questions && hookHasCz(root) && (await confirmRemoveCz());
   const { path, result } = installHook(root, { removeCz });
@@ -51,6 +53,13 @@ export async function init() {
 
   if (questions) await commitScript(root);
   nextSteps({ questions, installed, showCommitlintSnippet: commitlint && !commitlintReadsConfig(root) });
+}
+
+function linkSchema(root) {
+  const cfg = readProjectFile();
+  if (cfg.$schema || !existsSync(join(root, SCHEMA_REF))) return;
+  saveProjectConfig(cfg);
+  log.ok(`Autocomplete do ${c.bold(PROJECT_FILE)} ligado no editor ${c.dim('($schema)')}`);
 }
 
 async function setupProject(root) {

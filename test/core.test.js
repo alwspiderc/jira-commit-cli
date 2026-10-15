@@ -1,5 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import {
   commitBody,
   detailLines,
@@ -14,6 +15,7 @@ import { buildTree } from '../src/core/issue-tree.js';
 import { matchIssues, rankChoices } from '../src/core/issue-match.js';
 import { myIssuesJql, projectSearchJql } from '../src/core/jql.js';
 import { commentDocument, commitDescription } from '../src/core/adf.js';
+import { validate } from '../src/core/validate.js';
 import { BACK, exit, runSteps } from '../src/utils/steps.js';
 
 describe('commit-message', () => {
@@ -215,5 +217,50 @@ describe('runSteps', () => {
     );
     assert.deepEqual(calls, ['b', 'a', 'b']);
     assert.deepEqual(state, { a: 'a2', b: 'b2' });
+  });
+});
+
+describe('validate', () => {
+  const schema = JSON.parse(readFileSync(new URL('../schema/jira-commit.schema.json', import.meta.url), 'utf8'));
+
+  it('aceita uma config completa', () => {
+    const cfg = {
+      $schema: './x.json',
+      projectKey: 'LOJA',
+      issueType: 'Mobile',
+      statuses: ['Em andamento'],
+      maxResults: 100,
+      storyPointsScale: [1, 2, 3],
+      autoLinkBranch: true,
+      commit: { types: ['chore', { value: 'feat', description: 'x' }], scopes: ['home'], headerMaxLength: 120 },
+    };
+    assert.deepEqual(validate(schema, cfg), { errors: [], warnings: [] });
+    assert.deepEqual(validate(schema, { projectKey: 'APP', commit: false }).errors, []);
+  });
+
+  it('aponta cada erro com o caminho do campo', () => {
+    const { errors } = validate(schema, {
+      projectKey: 'app',
+      maxResults: 0,
+      statuses: 'Em andamento',
+      commit: { types: [{ description: 'sem value' }, 3] },
+    });
+    assert.deepEqual(errors, [
+      'projectKey está num formato inválido (ex.: APP)',
+      'maxResults deve ser no mínimo 1',
+      'statuses deve ser lista',
+      'commit.types[0].value é obrigatório',
+      'commit.types[1] deve ser texto ou objeto',
+    ]);
+  });
+
+  it('exige projectKey e só avisa sobre campos desconhecidos', () => {
+    const { errors, warnings } = validate(schema, { campoNovo: 1 });
+    assert.deepEqual(errors, ['projectKey é obrigatório']);
+    assert.deepEqual(warnings, ['campoNovo não é um campo conhecido']);
+  });
+
+  it('rejeita commit: true', () => {
+    assert.deepEqual(validate(schema, { projectKey: 'APP', commit: true }).errors, ['commit deve ser false ou objeto']);
   });
 });

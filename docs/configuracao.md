@@ -35,6 +35,21 @@ Exemplo completo (projeto loja-do-bairro-mobile):
 }
 ```
 
+### Validação e autocomplete
+
+A CLI confere o arquivo a cada uso. Se algo estiver errado, ela para e lista cada problema com o
+campo, por exemplo `maxResults deve ser número inteiro`. Campos que ela não conhece não travam
+nada: o `jira-commit doctor` mostra quais são (podem ser de uma versão mais nova da CLI).
+
+Em projetos Node com a CLI no `node_modules`, o `init` acrescenta a linha abaixo, e o VS Code (e
+outros editores) passa a sugerir e explicar os campos enquanto você digita:
+
+```json
+"$schema": "./node_modules/jira-commit-cli/schema/jira-commit.schema.json"
+```
+
+As regras ficam em [`schema/jira-commit.schema.json`](../schema/jira-commit.schema.json).
+
 ### Campos
 
 | Campo | Tipo | Padrão | Descrição |
