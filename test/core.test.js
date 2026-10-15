@@ -17,6 +17,7 @@ import { myIssuesJql, projectSearchJql } from '../src/core/jql.js';
 import { adfDocument } from '../src/core/adf.js';
 import { bodyParagraphs, commentParagraphs } from '../src/core/document.js';
 import { wikiText } from '../src/core/wiki.js';
+import { HOOK_BLOCK, hasCurrentBlock, hasCz, isLegacy, withHookBlock } from '../src/core/hook-script.js';
 import { validate } from '../src/core/validate.js';
 import { BACK, exit, runSteps } from '../src/utils/steps.js';
 
@@ -269,5 +270,37 @@ describe('validate', () => {
 
   it('rejeita commit: true', () => {
     assert.deepEqual(validate(schema, { projectKey: 'APP', commit: true }).errors, ['commit deve ser false ou objeto']);
+  });
+});
+
+describe('hook-script', () => {
+  const block = HOOK_BLOCK.join('\n');
+
+  it('cria o hook do zero', () => {
+    assert.equal(withHookBlock(null), `#!/bin/sh\n${block}\n`);
+  });
+
+  it('acrescenta no fim de um hook que já existe, sem apagar nada', () => {
+    assert.equal(withHookBlock('#!/bin/sh\nnpx lint\n'), `#!/bin/sh\nnpx lint\n\n${block}\n`);
+  });
+
+  it('troca a linha antiga do npx pelo bloco novo no mesmo lugar', () => {
+    const legacy =
+      '#!/bin/sh\n\n# jira-commit\nif sh -c ": >/dev/tty" 2>/dev/null; then npx --no-install jira-commit hook "$1" "$2" < /dev/tty; fi\nnpx outro\n';
+    assert.ok(isLegacy(legacy));
+    const updated = withHookBlock(legacy);
+    assert.equal(updated, `#!/bin/sh\n\n${block}\nnpx outro\n`);
+    assert.ok(hasCurrentBlock(updated) && !isLegacy(updated));
+  });
+
+  it('não muda um hook que já está atualizado', () => {
+    const current = withHookBlock('#!/bin/sh\nnpx lint\n');
+    assert.equal(withHookBlock(current), current);
+  });
+
+  it('tira o commitizen quando pedido', () => {
+    const script = '#!/bin/sh\nexec < /dev/tty && npx cz --hook || true\n';
+    assert.ok(hasCz(script));
+    assert.ok(!hasCz(withHookBlock(script, { removeCz: true })));
   });
 });

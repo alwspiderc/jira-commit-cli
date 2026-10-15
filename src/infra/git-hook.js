@@ -1,14 +1,13 @@
-import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { hasCz, withHookBlock } from '../core/hook-script.js';
 import { hooksDir } from './git.js';
 
-// Clientes gráficos (ex.: VS Code) não têm /dev/tty: sem a checagem, o commit travaria
-const HOOK_LINE =
-  'if sh -c ": >/dev/tty" 2>/dev/null; then npx --no-install jira-commit hook "$1" "$2" < /dev/tty; fi';
-const CZ_HOOK = /\bcz --hook\b/;
 const EXECUTABLE = 0o755;
+export const VERSIONED_HOOKS_DIR = '.githooks';
 
-function readHook(root) {
+// Husky, se o projeto usar; senão, o core.hooksPath (ex.: .githooks) ou o .git/hooks
+export function readHook(root) {
   const huskyDir = join(root, '.husky');
   const dir = existsSync(huskyDir) ? huskyDir : join(root, hooksDir());
   const path = join(dir, 'prepare-commit-msg');
@@ -16,24 +15,20 @@ function readHook(root) {
 }
 
 export function hookHasCz(root) {
-  return Boolean(readHook(root).content?.split('\n').some((l) => CZ_HOOK.test(l)));
+  return hasCz(readHook(root).content ?? '');
+}
+
+// Trocar o core.hooksPath desligaria os hooks que já estão em .git/hooks (fora os .sample e o nosso)
+export function customGitHooks(root) {
+  const dir = join(root, '.git', 'hooks');
+  if (!existsSync(dir)) return [];
+  const ours = (file) => file === 'prepare-commit-msg' && readFileSync(join(dir, file), 'utf8').includes('jira-commit');
+  return readdirSync(dir).filter((f) => !f.endsWith('.sample') && !ours(f));
 }
 
 export function installHook(root, { removeCz = false } = {}) {
   const { dir, path, content: before } = readHook(root);
-  let hook = before ?? '#!/bin/sh\n';
-
-  if (removeCz) {
-    hook = hook
-      .split('\n')
-      .filter((l) => !CZ_HOOK.test(l))
-      .join('\n')
-      .replace(/^\n+/, '');
-  }
-  if (!hook.includes('jira-commit')) {
-    hook = [hook.trimEnd(), `# jira-commit\n${HOOK_LINE}`].filter(Boolean).join(before ? '\n\n' : '\n') + '\n';
-  }
-
+  const hook = withHookBlock(before, { removeCz });
   if (hook === before) return { path, result: 'unchanged' };
   mkdirSync(dir, { recursive: true });
   writeFileSync(path, hook);

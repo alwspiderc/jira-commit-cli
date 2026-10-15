@@ -16,6 +16,18 @@ export function hooksDir() {
   return git('rev-parse --git-path hooks');
 }
 
+export function hooksPath() {
+  try {
+    return git('config core.hooksPath');
+  } catch {
+    return '';
+  }
+}
+
+export function setHooksPath(path) {
+  git(`config core.hooksPath ${path}`);
+}
+
 export function currentBranch() {
   try {
     return git('rev-parse --abbrev-ref HEAD');

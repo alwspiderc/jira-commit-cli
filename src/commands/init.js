@@ -1,9 +1,9 @@
-import { existsSync } from 'node:fs';
+import { existsSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { commitOptions, defaultCommitSection, fromCz } from '../core/commit-options.js';
 import { commitlintReadsConfig, loadCzConfig, usesCommitlint } from '../infra/commit-tooling.js';
-import { repoRoot } from '../infra/git.js';
-import { hookHasCz, installHook } from '../infra/git-hook.js';
+import { hooksPath, repoRoot, setHooksPath } from '../infra/git.js';
+import { customGitHooks, hookHasCz, installHook, VERSIONED_HOOKS_DIR } from '../infra/git-hook.js';
 import { issueTypes } from '../infra/jira/api.js';
 import { useSite } from '../infra/jira/client.js';
 import { listSites } from '../infra/storage/credentials.js';
@@ -46,7 +46,7 @@ export async function init() {
   }
   const questions = Boolean(commitOptions(cfg));
 
-  const installed = await setupProject(root);
+  const { installed, versionedHooks } = await setupProject(root);
   linkSchema(root);
 
   const removeCz = questions && hookHasCz(root) && (await confirmRemoveCz());
@@ -54,7 +54,13 @@ export async function init() {
   log.ok(`${HOOK_MESSAGES[result]} ${c.dim(path)}`);
 
   if (questions) await commitScript(root);
-  nextSteps({ questions, installed, showCommitlintSnippet: commitlint && !commitlintReadsConfig(root) });
+  nextSteps({
+    questions,
+    installed,
+    versionedHooks,
+    commitCommand: readPackage(root) ? 'npm run commit' : COMMIT_SCRIPT,
+    showCommitlintSnippet: commitlint && !commitlintReadsConfig(root),
+  });
 }
 
 function linkSchema(root) {
@@ -66,10 +72,7 @@ function linkSchema(root) {
 
 async function setupProject(root) {
   const pkg = readPackage(root);
-  if (!pkg) {
-    log.warn('Sem package.json: o hook fica só em .git/hooks e não vai para o repositório.');
-    return false;
-  }
+  if (!pkg) return { installed: false, versionedHooks: await setupVersionedHooks(root) };
   const legacyHusky = Boolean(pkg.json.husky?.hooks);
   if (legacyHusky) log.warn('O projeto usa o Husky 4 (configurado no package.json): o jira-commit não mexe nele.');
 
@@ -81,7 +84,33 @@ async function setupProject(root) {
 
   const huskyInstalled = !legacyHusky && hasDependency(readPackage(root).json, 'husky');
   if (huskyInstalled && !existsSync(join(root, '.husky', '_'))) await setupHusky(root, pm);
-  return installed;
+  return { installed, versionedHooks: false };
+}
+
+// Sem package.json não há Husky: a pasta versionada vale para o time, mas o core.hooksPath é
+// configuração local, então cada pessoa roda o init uma vez
+async function setupVersionedHooks(root) {
+  if (existsSync(join(root, '.husky')) || hooksPath()) return false;
+  const dir = join(root, VERSIONED_HOOKS_DIR);
+  if (!existsSync(dir)) {
+    const custom = customGitHooks(root);
+    if (custom.length) {
+      log.warn(`O .git/hooks já tem ${custom.join(', ')}: o hook do jira-commit fica lá, só na sua máquina.`);
+      return false;
+    }
+    const ok = await confirm({
+      message: `Guardar o hook na pasta ${c.bold(VERSIONED_HOOKS_DIR)}, dentro do repositório? ${c.dim('· vale para o time todo')}`,
+      default: true,
+    });
+    if (!ok) {
+      log.warn('O hook fica em .git/hooks, só na sua máquina.');
+      return false;
+    }
+    mkdirSync(dir, { recursive: true });
+  }
+  setHooksPath(VERSIONED_HOOKS_DIR);
+  log.ok(`Hooks do repositório ativados ${c.dim(`· git config core.hooksPath ${VERSIONED_HOOKS_DIR}`)}`);
+  return true;
 }
 
 function confirmCli() {
@@ -224,11 +253,14 @@ async function commitScript(root) {
   log.ok(`Script ${c.bold('npm run commit')} criado no package.json`);
 }
 
-function nextSteps({ questions, installed, showCommitlintSnippet }) {
+function nextSteps({ questions, installed, versionedHooks, commitCommand, showCommitlintSnippet }) {
   console.log();
   if (installed) log.hint('Commite o package.json, o lock e a pasta .husky: assim o hook vale para o time todo.');
+  if (versionedHooks) {
+    log.hint(`Commite a pasta ${VERSIONED_HOOKS_DIR}. Cada pessoa do time roda jira-commit init uma vez para ativá-la.`);
+  }
   log.hint('Pronto! No próximo git commit (pelo terminal) o menu do Jira aparece.');
-  if (questions) log.hint('Para commitar sem abrir o editor no fim: npm run commit');
+  if (questions) log.hint(`Para commitar sem abrir o editor no fim: ${commitCommand}`);
   log.hint('Para conferir suas atividades agora: jira-commit list');
   if (questions && showCommitlintSnippet) {
     console.log();

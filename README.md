@@ -28,7 +28,7 @@ feat(home): adiciona card de benefício   →   feat(home): LOJA-2411 adiciona c
 ## Início rápido
 
 ```bash
-npm i -D git+https://github.com/alwspiderc/jira-commit-cli.git   # no repositório
+npm i -D git+https://github.com/alwspiderc/jira-commit-cli.git   # no repositório (ou -g, para projetos sem Node)
 npx --no-install jira-commit login   # uma vez por máquina: URL, e-mail e API token
 npx --no-install jira-commit init    # uma vez por repo: .jira-commit.json, Husky, hook e npm run commit
 npm run commit                       # pelo terminal: tipo, escopo, descrição e atividade do Jira

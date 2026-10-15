@@ -216,22 +216,30 @@ Sem nenhuma das duas, a IA fica desligada, mesmo com `"ai": true`.
 
 ## Hook instalado
 
-O `init` adiciona ao `prepare-commit-msg` (do Husky ou do `.git/hooks`). Se o projeto ainda não
-tem Husky, o `init` oferece instalar e configurar (script `"prepare": "husky"`), para o hook ir
-para o repositório:
+O `init` adiciona ao `prepare-commit-msg`. Onde fica o arquivo:
+
+| Projeto | Pasta do hook | Vai para o repositório? |
+|---|---|---|
+| Node com Husky (o `init` oferece instalar) | `.husky/` | Sim |
+| Sem `package.json` (Python, Java, Go…) | `.githooks/`, com `git config core.hooksPath .githooks` (o `init` oferece) | Sim. Cada pessoa roda o `init` uma vez, porque o `core.hooksPath` é configuração local |
+| Outros casos | `.git/hooks/` | Não, vale só na sua máquina |
 
 ```sh
 # jira-commit
-if sh -c ": >/dev/tty" 2>/dev/null; then npx --no-install jira-commit hook "$1" "$2" < /dev/tty; fi
+JC=./node_modules/.bin/jira-commit; [ -f "$JC" ] || JC=$(command -v jira-commit)
+if [ -z "$JC" ]; then echo "jira-commit não encontrado: commit sem o menu do Jira" >&2
+elif sh -c ": >/dev/tty" 2>/dev/null; then "$JC" hook "$1" "$2" < /dev/tty; fi
 ```
 
+- Usa a CLI do projeto (`node_modules`) e, se não houver, a instalada globalmente.
+- **Sem nenhuma das duas, o commit segue** sem o menu e mostra um aviso. Antes, o commit era
+  cancelado.
 - `sh -c ": >/dev/tty"` testa se existe um terminal. Em clientes gráficos não existe, e o
   hook é pulado.
-- `npx --no-install` usa a CLI instalada no projeto e nunca baixa nada na hora do commit.
-  Se ela não estiver instalada, o npx falha e **o commit é cancelado**. Por isso o `init`
-  oferece adicionar a CLI como devDependency do projeto.
 - `"$1"` é o arquivo da mensagem e `"$2"` é a origem (`message`, `merge`, `squash`,
   `commit`…), que o git passa para o hook.
+- Hooks instalados por versões antigas (com `npx --no-install jira-commit hook`) são trocados
+  por esse bloco quando você roda o `init` de novo.
 
 Com o questionário ligado, o `init` também cria (ou troca, se você confirmar) o script no
 `package.json`:

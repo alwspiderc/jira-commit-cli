@@ -82,9 +82,19 @@ npm i --no-save git+https://github.com/alwspiderc/jira-commit-cli.git   # do git
 ```
 
 O `--no-save` não mexe no `package.json` nem no lock, mas o próximo `npm install` remove o
-pacote, e aí o commit falha até você instalar de novo. Para evitar isso, o `init` oferece
+pacote, e aí o menu some do commit até você instalar de novo. Para evitar isso, o `init` oferece
 adicionar a CLI ao `package.json` ([seção 5](#5-configurar-o-repositório-uma-vez-por-repo)). Com a pasta local, o pacote é um link,
 então qualquer mudança no código da CLI vale na hora.
+
+**Projetos sem Node** (Python, Java, Go, …) ou **para usar em todos os seus repositórios**:
+instale uma vez, de forma global. A máquina precisa ter Node; o projeto, não.
+
+```bash
+npm i -g git+https://github.com/alwspiderc/jira-commit-cli.git
+jira-commit init      # sem o npx: o comando fica disponível em qualquer pasta
+```
+
+O hook procura primeiro a CLI do projeto (`node_modules`) e depois a global.
 
 Confira se o binário ficou disponível:
 
@@ -168,8 +178,12 @@ Depois, **commite o `package.json`, o lock e a pasta `.husky`**. Assim, um coleg
 **d) Instala o hook** `prepare-commit-msg`:
 - se o projeto usa **Husky** (tem a pasta `.husky/`), a linha é adicionada em
   `.husky/prepare-commit-msg`, que vai para o repositório;
+- num projeto **sem `package.json`**, oferece a pasta `.githooks/` (versionada) e ativa com
+  `git config core.hooksPath .githooks`. Como essa configuração é local, cada pessoa do time
+  roda o `init` uma vez;
 - senão, vai para `.git/hooks/prepare-commit-msg`, que **não** é versionado: vale só na sua
   máquina;
+- um hook de versão antiga (com `npx`) é atualizado para o bloco novo;
 - se já existir um hook, a linha do jira-commit é **acrescentada no final**, sem apagar
   nada. Rodar o `init` de novo não duplica a linha;
 - se o hook tiver o **commitizen** (`npx cz --hook` ou `git cz --hook`) e o questionário
@@ -591,14 +605,18 @@ Para comentar junto com um commit, use a ação **❝ Comentar na atividade** do
 | Jira fora do ar ou sem rede | Mostra um aviso e pede a chave manualmente (vazio = pular) |
 | Ctrl+C no menu | **Cancela o commit** (nada é commitado, e o stage fica como estava) |
 | Erro ao criar a atividade no Jira | Mostra o erro e **cancela o commit**. Rode o commit de novo |
-| CLI não instalada no projeto (ex.: depois de um `npm install` com a instalação `--no-save`) | **O commit falha** com `npx canceled due to missing packages`. Instale a CLI de novo ([seção 3](#3-instalação)) |
+| CLI não instalada (nem no projeto nem global) | O commit **segue sem o menu** e mostra `jira-commit não encontrado`. Instale a CLI ([seção 3](#3-instalação)) |
 
 ## 12. Problemas comuns
 
+**`jira-commit não encontrado: commit sem o menu do Jira`**
+O hook não achou a CLI nem no projeto nem global. O commit foi feito, mas sem a chave.
+Instale a CLI ([seção 3](#3-instalação)) e, se o hook for de uma versão antiga, rode o `init`
+de novo para atualizá-lo.
+
 **`npx canceled due to missing packages` ao commitar**
-O hook chama a CLI, mas ela não está instalada no projeto. Instale de novo
-([seção 3](#3-instalação)). Isso acontece depois de um `npm install` quando a CLI foi
-instalada com `--no-save`.
+O hook é de uma versão antiga, que cancelava o commit sem a CLI. Rode o `init` de novo: ele
+troca o hook pelo bloco novo.
 
 **`Credenciais do Jira não encontradas. Rode: jira-commit login`**
 Rode o `login`. Se você usa variáveis de ambiente, confira se as três estão definidas.

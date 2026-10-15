@@ -59,6 +59,7 @@ jira-commit-cli/
 │  │  ├─ issue-match.js         Filtro local (sem acento) das atividades e das opções
 │  │  ├─ jql.js                 JQL das suas atividades e da busca no projeto
 │  │  ├─ validate.js            Valida um valor contra o schema/jira-commit.schema.json
+│  │  ├─ hook-script.js         Bloco do jira-commit no hook: inclui, atualiza o antigo, tira o cz
 │  │  └─ adf.js                 Descrição em Atlassian Document Format
 │  ├─ infra/
 │  │  ├─ jira/client.js         Site atual (useSite), requisição autenticada, timeout e JiraError (com o status HTTP)
@@ -66,7 +67,7 @@ jira-commit-cli/
 │  │  ├─ jira/dialects.js       O que muda entre Cloud e Server/DC: versão da API, busca, responsável, texto, épico
 │  │  ├─ storage/               credentials.js (vários Jiras), repo-state.js, project-config.js
 │  │  ├─ git.js                 Raiz do repo, branch, arquivos, diff do stage e descrições recentes
-│  │  ├─ git-hook.js            Lê e instala o prepare-commit-msg (Husky ou .git/hooks)
+│  │  ├─ git-hook.js            Lê e grava o prepare-commit-msg (.husky, core.hooksPath ou .git/hooks)
 │  │  ├─ commit-tooling.js      .cz-config.js e commitlint do projeto
 │  │  ├─ package-json.js        Lê o package.json e grava scripts mantendo a formatação
 │  │  ├─ package-manager.js     Detecta npm/yarn/pnpm, instala devDependencies e roda binários (Husky)
@@ -237,6 +238,13 @@ porque cria um `pre-commit` com `npm test`, que mudaria o commit de todo mundo s
 pedir. A CLI entra no `package.json` pelo `repository.url` do próprio `package.json` dela
 (`src/version.js`), e todos os pacotes aprovados vão numa instalação só.
 
+**Hook sem `npx`, que não trava o commit.** O hook procura `./node_modules/.bin/jira-commit` e,
+se não achar, a CLI global (`command -v`). Assim ele funciona em projetos sem Node e evita o
+`npx`, que poderia baixar o outro pacote público chamado `jira-commit`. Sem CLI nenhuma, o
+commit segue com um aviso: um colega que ainda não instalou não fica impedido de commitar. O
+`core/hook-script.js` reconhece as linhas de qualquer versão do bloco e as troca pelo bloco
+atual no mesmo lugar do arquivo.
+
 **Cloud e Server: um dialeto por tipo de Jira.** O `api.js` é escrito uma vez, e o que muda
 fica no `dialects.js`, escolhido pelo `type` do site:
 
@@ -324,10 +332,10 @@ Nos dois casos, Ctrl+C no menu de atividades sai sem gravar a chave e não mexe 
 ## Limitações conhecidas
 
 - **Commit por cliente gráfico** pula o hook (não há terminal para o menu).
-- **CLI ausente bloqueia o commit:** o hook chama `npx --no-install jira-commit`. Se a CLI
-  não estiver instalada, o npx falha e o commit é cancelado. O `init` oferece pôr a CLI no
-  `package.json`, e aí basta um `npm install`. Sem isso (ex.: instalação `--no-save`), todos
-  precisam ter a CLI antes de o hook entrar no repositório.
+- **CLI ausente:** o commit segue sem o menu, só com um aviso. Para o time todo ter o menu, a
+  CLI precisa estar no `package.json` (o `init` oferece) ou instalada globalmente.
+- **`.githooks` em projeto sem Node:** o `core.hooksPath` é configuração local do git. Quem
+  clona precisa rodar o `jira-commit init` uma vez para ativar a pasta.
 - **Nome no npm:** existe um pacote público **diferente** chamado `jira-commit`. Por isso o
   hook e a documentação usam `npx --no-install`: sem ele, o npx ofereceria baixar o outro
   pacote quando a CLI não está instalada.
