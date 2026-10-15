@@ -6,7 +6,7 @@ import { init } from '../src/commands/init.js';
 import { comment } from '../src/commands/comment.js';
 import { doctor } from '../src/commands/doctor.js';
 import { t } from '../src/i18n/index.js';
-import { c, icon, log } from '../src/ui/index.js';
+import { badge, c, icon, log, wordmark } from '../src/ui/index.js';
 import { VERSION } from '../src/version.js';
 
 const [, , command, ...args] = process.argv;
@@ -20,17 +20,22 @@ const commands = {
   doctor,
 };
 
-const cmd = (name, desc) => `    ${c.accent(name.padEnd(27))} ${desc}`;
+const CMD_WIDTH = 27;
+const cmd = (name, desc) => {
+  const [head, ...args] = name.split(' ');
+  const styled = c.key(head) + (args.length ? ` ${c.warn(args.join(' '))}` : '');
+  return `    ${styled}${' '.repeat(Math.max(1, CMD_WIDTH - name.length))} ${desc}`;
+};
 const help = () => `
-  ${icon.brand} ${c.brand('jira-commit')} ${c.dim(`v${VERSION}`)}
+  ${icon.brand} ${wordmark()} ${badge(`v${VERSION}`)}
   ${c.dim(t.cli.tagline)}
 
-  ${c.bold(t.cli.firstSteps)}
+  ${c.title(`▸ ${t.cli.firstSteps}`)}
 ${cmd('login', t.cli.login)}
 ${cmd('init', t.cli.init)}
 ${cmd('doctor', t.cli.doctor)}
 
-  ${c.bold(t.cli.daily)}
+  ${c.title(`▸ ${t.cli.daily}`)}
 ${cmd('list', t.cli.list)}
 ${cmd(t.cli.listAllArg, t.cli.listAll)}
 ${cmd(t.cli.listStatusArg, t.cli.listStatus)}

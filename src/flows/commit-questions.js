@@ -2,7 +2,7 @@ import { keyReserve, splitConventional } from '../core/commit-message.js';
 import { rankChoices } from '../core/issue-match.js';
 import { t } from '../i18n/index.js';
 import { BACK, runSteps } from '../utils/steps.js';
-import { c, field, notice, search, withSpinner } from '../ui/index.js';
+import { c, field, notice, search, typeColor, withSpinner } from '../ui/index.js';
 
 const NO_SCOPE = '__none__';
 const PAGE_SIZE = 15;
@@ -31,7 +31,7 @@ export async function askCommit(cfg, opts, suggestion, previous) {
 function askType(types) {
   const width = Math.max(...types.map((t) => t.value.length));
   const choices = types.map((t) => ({
-    name: t.description ? `${t.value.padEnd(width)}  ${c.dim(t.description)}` : t.value,
+    name: t.description ? `${typeColor(t.value)(t.value.padEnd(width))}  ${c.dim(t.description)}` : typeColor(t.value)(t.value),
     short: t.value,
     value: t.value,
     keywords: `${t.value} ${t.description ?? ''}`,

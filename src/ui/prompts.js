@@ -21,7 +21,14 @@ export const search = themed(inquirer.search);
 export const searchSelect = themed(searchSelectPrompt);
 export const { Separator } = inquirer;
 
-export const section = (label) => new Separator(c.dim(`${label} `.padEnd(40, '─')));
+const SECTION_WIDTH = 40;
+
+export const section = (label = '') => {
+  const text = label.replace(/^──\s*/, '');
+  if (!text) return new Separator(c.dim('─'.repeat(SECTION_WIDTH)));
+  const rest = Math.max(2, SECTION_WIDTH - text.length - 4);
+  return new Separator(`${c.dim('──')} ${c.title(text)} ${c.dim('─'.repeat(rest))}`);
+};
 
 export const notice = (text) => new Separator(c.dim(` ${text}`));
 

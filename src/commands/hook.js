@@ -9,7 +9,7 @@ import { getRepoState, setRepoState } from '../infra/storage/repo-state.js';
 import { findMyIssues } from '../services/issues.js';
 import { openProject } from '../services/project.js';
 import { inBackground } from '../utils/promise.js';
-import { BACK, c, header, log, summaryCard } from '../ui/index.js';
+import { BACK, c, colorCommitLine, header, log, summaryCard } from '../ui/index.js';
 import { chooseIssue, linkBranchIssue } from '../flows/choose-issue.js';
 import { askCommit, askMessage } from '../flows/commit-questions.js';
 import { postComment } from '../flows/comment.js';
@@ -26,8 +26,8 @@ export async function hook(msgFile, source) {
   if (keyRegex.test(firstLine)) return;
 
   const branch = currentBranch();
-  const context = firstLine ? c.accent(firstLine) : c.dim(t.hook.emptyMessage);
-  header(`${cfg.projectKey} · ${branch}`, `${context}  ${c.dim(`· ${t.common.escBack}`)}`);
+  const context = firstLine ? colorCommitLine(firstLine) : c.dim(t.hook.emptyMessage);
+  header(`⎇ ${branch}`, `${context}  ${c.dim(`· ${t.common.escBack}`)}`, { project: cfg.projectKey });
 
   const branchKey = cfg.autoLinkBranch ? branch.match(keyRegex)?.[0] : null;
   const prefetch = branchKey ? null : inBackground(findMyIssues(cfg));

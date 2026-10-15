@@ -1,5 +1,5 @@
 import { stripVTControlCharacters } from 'node:util';
-import { c, icon } from './theme.js';
+import { badge, c, icon, wordmark } from './theme.js';
 
 export const log = {
   ok: (msg) => console.log(`${icon.ok} ${msg}`),
@@ -9,31 +9,54 @@ export const log = {
   hint: (msg) => console.log(c.dim(`  ${msg}`)),
 };
 
-export function header(title, context) {
+export function header(title, context, { project } = {}) {
   console.log();
-  console.log(`${icon.brand} ${c.brand('jira-commit')}  ${c.dim(title)}`);
-  if (context) console.log(`${c.dim('│')} ${context}`);
+  const tag = project ? `${badge(project)} ` : '';
+  console.log(`${icon.brand} ${wordmark()}  ${tag}${c.accent(title)}`);
+  if (context) console.log(`${c.brand('│')} ${context}`);
   console.log();
 }
 
 const visibleWidth = (s) => stripVTControlCharacters(s).length;
 
+const ANSI = /\x1b\[[0-9;]*m/y;
+const RESET = '\x1b[0m';
+
+// Corta pelo texto visível sem perder as cores do pedaço que fica
+export function truncateVisible(text, max) {
+  if (visibleWidth(text) <= max) return text;
+  let out = '';
+  let visible = 0;
+  for (let i = 0; i < text.length; ) {
+    ANSI.lastIndex = i;
+    const code = ANSI.exec(text);
+    if (code) {
+      out += code[0];
+      i += code[0].length;
+    } else if (visible === max - 1) {
+      out += '…';
+      break;
+    } else {
+      out += text[i++];
+      visible++;
+    }
+  }
+  return out.includes('\x1b') ? out + RESET : out;
+}
+
 export function card(title, lines, { color = c.ok } = {}) {
   const max = Math.min(process.stdout.columns || 100, 100) - 4;
-  const fit = (s) => {
-    if (visibleWidth(s) <= max) return s;
-    return stripVTControlCharacters(s).slice(0, max - 1) + '…';
-  };
+  const fit = (s) => truncateVisible(s, max);
   const body = lines.map(fit);
   const inner = Math.max(visibleWidth(title) + 3, ...body.map(visibleWidth));
 
-  const top = `╭─ ${title} ${'─'.repeat(Math.max(0, inner - visibleWidth(title) - 1))}╮`;
+  const top = `${color('╭─')} ${title} ${color(`${'─'.repeat(Math.max(0, inner - visibleWidth(title) - 1))}╮`)}`;
   const rows = body.map((l) => `${color('│')} ${l}${' '.repeat(inner - visibleWidth(l))} ${color('│')}`);
-  const bottom = `╰${'─'.repeat(inner + 2)}╯`;
+  const bottom = color(`╰${'─'.repeat(inner + 2)}╯`);
 
   console.log();
-  console.log(color(top.replace(title, '\0')).replace('\0', title));
+  console.log(top);
   rows.forEach((r) => console.log(r));
-  console.log(color(bottom));
+  console.log(bottom);
   console.log();
 }

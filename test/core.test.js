@@ -1,6 +1,8 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { stripVTControlCharacters } from 'node:util';
+import { truncateVisible } from '../src/ui/output.js';
 import {
   commitBody,
   detailLines,
@@ -313,5 +315,17 @@ describe('hook-script', () => {
     const script = '#!/bin/sh\nexec < /dev/tty && npx cz --hook || true\n';
     assert.ok(hasCz(script));
     assert.ok(!hasCz(withHookBlock(script, { removeCz: true })));
+  });
+});
+
+describe('truncateVisible', () => {
+  it('corta pelo texto visível e mantém as cores', () => {
+    const colored = '\x1b[92mverde\x1b[39m e \x1b[96mciano\x1b[39m';
+    assert.equal(truncateVisible(colored, 50), colored);
+    const cut = truncateVisible(colored, 8);
+    assert.equal(stripVTControlCharacters(cut), 'verde e…');
+    assert.ok(cut.startsWith('\x1b[92mverde'));
+    assert.ok(cut.endsWith('\x1b[0m'));
+    assert.equal(truncateVisible('sem cor nenhuma', 7), 'sem co…');
   });
 });

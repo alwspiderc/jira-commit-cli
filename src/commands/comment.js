@@ -13,7 +13,7 @@ export async function comment(args = []) {
   const keyRegex = issueKeyRegex(cfg.projectKey);
   const { key, text } = parseArgs(cfg, args);
   const branch = currentBranch();
-  header(`${cfg.projectKey} · ${t.comment.title}`, c.dim(t.common.escBack));
+  header(t.comment.title, c.dim(t.common.escBack), { project: cfg.projectKey });
 
   const answers = await runSteps(
     [
@@ -38,7 +38,7 @@ export async function comment(args = []) {
     return;
   }
   const link = issueUrl(answers.key);
-  if (link) log.hint(`${icon.link} ${link}`);
+  if (link) console.log(`  ${icon.link} ${c.link(link)}`);
   console.log();
 }
 

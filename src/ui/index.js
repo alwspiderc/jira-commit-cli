@@ -1,4 +1,4 @@
-export { c, icon } from './theme.js';
+export { badge, c, colorCommitLine, icon, typeColor, wordmark } from './theme.js';
 export { select, input, confirm, password, search, searchSelect, Separator, section, notice, field } from './prompts.js';
 export { log, header, card } from './output.js';
 export { withSpinner } from './spinner.js';

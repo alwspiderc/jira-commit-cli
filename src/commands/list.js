@@ -7,7 +7,7 @@ import { c, header, log, treeLines, withSpinner } from '../ui/index.js';
 export async function list(args = []) {
   const cfg = openProject();
   const { all, status } = parseArgs(args);
-  header(`${cfg.projectKey} · ${t.list.title}`, c.dim(filterLabel(cfg, { all, status })));
+  header(t.list.title, c.dim(filterLabel(cfg, { all, status })), { project: cfg.projectKey });
 
   const issues = await withSpinner(t.list.searching, () => findMyIssues(cfg, { all, status }));
 
@@ -22,8 +22,9 @@ export async function list(args = []) {
 
   console.log();
   const limitHit = issues.length >= cfg.maxResults;
-  log.hint(
-    t.list.count(issues.length) + (limitHit ? t.list.limit(cfg.maxResults) : '') + (!all && !status ? t.list.showAll : ''),
+  console.log(
+    `  ${c.title(t.list.count(issues.length))}` +
+      c.dim((limitHit ? t.list.limit(cfg.maxResults) : '') + (!all && !status ? t.list.showAll : '')),
   );
   console.log();
 }
