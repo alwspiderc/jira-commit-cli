@@ -14,24 +14,70 @@ git e `util.styleText` para as cores.
 
 ## Estrutura
 
+O código é dividido em camadas. Cada camada só importa das que estão abaixo dela:
+
+```text
+commands  →  flows  →  services  →  infra
+    │          │          │           │
+    └──────────┴──── ui ──┴── core ───┴── utils
+```
+
+- **core**: regras do domínio, funções puras (sem rede, disco ou terminal). É a parte coberta por testes.
+- **infra**: tudo que fala com o mundo de fora: API do Jira, git, IA, arquivos de config e de hook.
+- **services**: casos de uso sem interação, que juntam infra e core (ex.: montar o JQL e buscar).
+- **ui**: identidade visual e prompts. Não conhece Jira nem git.
+- **flows**: as conversas com a pessoa (menus e perguntas), compostas a partir das camadas de baixo.
+- **commands**: um arquivo por subcomando. Só orquestra.
+
 ```text
 jira-commit-cli/
-├─ bin/jira-commit.js        Entrada: roteia o subcomando e trata erros/Ctrl+C
+├─ bin/jira-commit.js            Entrada: roteia o subcomando e trata erros/Ctrl+C
 ├─ src/
 │  ├─ commands/
-│  │  ├─ hook.js            Chamado pelo git: menu, criação de atividade, reescrita da mensagem
-│  │  ├─ init.js            Cria .jira-commit.json, importa do cz, instala o hook e o npm run commit
-│  │  ├─ login.js           Salva e testa as credenciais
-│  │  └─ list.js            Lista atividades (mesma árvore do menu)
-│  ├─ config.js             Credenciais, estado local, .jira-commit.json, montagem do JQL
-│  ├─ message.js            Questionário do commit (tipo, escopo, descrição) e corpo/BREAKING CHANGE
-│  ├─ search-select.js      Prompt do menu de atividades: filtro local na hora + busca no Jira em paralelo
-│  ├─ jira.js               Cliente da API REST v3 do Jira
-│  ├─ git.js                Raiz do repo, branch, arquivos, diff do stage e descrições recentes
-│  ├─ tree.js               Agrupa subtarefas sob o pai e desenha as linhas
-│  ├─ ui.js                 Identidade visual: cores, ícones, tema dos prompts, spinner, cartão
-│  ├─ adf.js                Monta a descrição em Atlassian Document Format
-│  └─ ai.js                 Sugestões de título e de descrição via Claude (opcional)
+│  │  ├─ hook.js                Chamado pelo git: lê a mensagem, chama os flows e grava o resultado
+│  │  ├─ init.js                Cria .jira-commit.json, importa do cz, instala o hook e o npm run commit
+│  │  ├─ login.js               Salva e testa as credenciais
+│  │  └─ list.js                Lista atividades (mesma árvore do menu)
+│  ├─ flows/
+│  │  ├─ choose-issue.js        Menu de atividades: lista, busca, ações (criar, outros status, pular…)
+│  │  ├─ create-issue.js        Criação de tarefa/subtarefa a partir do commit
+│  │  ├─ issue-fields.js        Perguntas da criação: tipo, pai, épico, story points
+│  │  ├─ after-create.js        Sprint ativa e status inicial (falhas não abortam o commit)
+│  │  ├─ commit-questions.js    Questionário do commit (tipo, escopo, descrição) e corpo/BREAKING CHANGE
+│  │  └─ manual-key.js          Digitar a chave, validada no Jira
+│  ├─ services/
+│  │  └─ issues.js              JQL das suas atividades (status por ID), busca no projeto, épicos, tipo de subtarefa
+│  ├─ core/
+│  │  ├─ commit-message.js      splitConventional, commitBody, detailLines, formatMessage, keyReserve
+│  │  ├─ commit-options.js      Seção "commit" do .jira-commit.json e importação do cz
+│  │  ├─ issue-title.js         Prefixo do produto e capitalização do título
+│  │  ├─ issue-tree.js          Agrupa subtarefas sob o pai
+│  │  ├─ issue-match.js         Filtro local (sem acento) das atividades e das opções
+│  │  ├─ jql.js                 JQL das suas atividades e da busca no projeto
+│  │  └─ adf.js                 Descrição em Atlassian Document Format
+│  ├─ infra/
+│  │  ├─ jira/client.js         Requisição autenticada, timeout e JiraError (com o status HTTP)
+│  │  ├─ jira/api.js            Endpoints da API REST v3 e Agile
+│  │  ├─ storage/               credentials.js, repo-state.js, project-config.js
+│  │  ├─ git.js                 Raiz do repo, branch, arquivos, diff do stage e descrições recentes
+│  │  ├─ git-hook.js            Lê e instala o prepare-commit-msg (Husky ou .git/hooks)
+│  │  ├─ commit-tooling.js      .cz-config.js e commitlint do projeto
+│  │  ├─ package-json.js        Lê o package.json e grava scripts mantendo a formatação
+│  │  ├─ message-file.js        Arquivo da mensagem que o git passa ao hook
+│  │  └─ ai.js                  Sugestões de título e de descrição via Claude (opcional)
+│  ├─ ui/
+│  │  ├─ index.js               Ponto único de import da camada
+│  │  ├─ theme.js               Cores, ícones e tema dos prompts
+│  │  ├─ prompts.js             Prompts com o tema, separadores e o campo de texto longo
+│  │  ├─ search-select.js       Prompt do menu: filtro local na hora + busca remota em paralelo
+│  │  ├─ issue-lines.js         Desenha a árvore de atividades
+│  │  ├─ issue-choices.js       Árvore como opções do menu
+│  │  ├─ output.js              log, cabeçalho e cartão
+│  │  ├─ spinner.js             Spinner com ✔/✖ no fim
+│  │  └─ summary-card.js        Cartão final do hook
+│  ├─ utils/                    text.js (normalize, truncate), promise.js (inBackground)
+│  └─ version.js
+├─ test/core.test.js            Testes da camada core (node:test)
 └─ docs/
 ```
 
@@ -86,7 +132,7 @@ tipo? ── subtarefa ── chooseParent() ── getIssue(pai)   (labels, com
 ## Endpoints do Jira usados
 
 Todos ficam na API REST v3, com autenticação Basic (`email:token` em base64) e timeout de
-10s por requisição (`TIMEOUT_MS` em `jira.js`).
+10s por requisição (`TIMEOUT_MS` em `infra/jira/client.js`).
 
 | Função | Método e caminho | Uso |
 |---|---|---|
@@ -112,7 +158,7 @@ entra na árvore.
 
 **Status por ID, não por nome.** O Jira devolve os nomes de status no idioma do usuário,
 mas o JQL só aceita o nome original. `status IN ("Tarefas pendentes")` não dá erro: volta
-vazio. Esse bug já aconteceu. `statusIds()` em `config.js` resolve os nomes pelo endpoint
+vazio. Esse bug já aconteceu. `statusIds()` em `services/issues.js` resolve os nomes pelo endpoint
 de status do projeto, que devolve o nome traduzido junto com o ID.
 
 **A chave entra depois do `tipo(escopo):`.** Com commitlint, o tipo precisa ser o começo
@@ -138,10 +184,10 @@ precisa rodar **antes** do jira-commit, porque sobrescreve o arquivo da mensagem
 **Busca e IA em paralelo com as perguntas.** A busca no Jira e a sugestão de descrição
 levam alguns segundos. Disparadas no começo do hook, elas terminam enquanto a pessoa
 escolhe tipo e escopo, e o menu abre sem spinner. As promessas recebem `.catch(() => {})`
-para o Node não avisar de rejeição não tratada; o erro real aparece quando o resultado é
+(ou passam por `inBackground()`) para o Node não encerrar por rejeição não tratada; o erro real aparece quando o resultado é
 usado.
 
-**Prompt próprio no menu de atividades (`search-select.js`).** O `@inquirer/search` não
+**Prompt próprio no menu de atividades (`ui/search-select.js`).** O `@inquirer/search` não
 serve por dois motivos. Ele não tem `default`, então o cursor não começaria na atividade
 sugerida. E ele só troca a lista quando a busca assíncrona termina, então o filtro das
 suas atividades esperaria a rede (0,3 a 1 s por consulta). O prompt próprio, feito com o
@@ -153,7 +199,7 @@ disparado por tecla, **não redesenha a tela**, porque as atualizações da tecl
 a do efeito se perde. Por isso o estado "buscando" é marcado no próprio keypress, junto com
 o termo, e o efeito só agenda a busca.
 
-**Texto longo numa linha própria (`field` em `ui.js`).** O `@inquirer` quebra a linha por
+**Texto longo numa linha própria (`field` em `ui/prompts.js`).** O `@inquirer` quebra a linha por
 palavra (`wrap-ansi`), mas calcula o cursor com o `readline`, que conta a quebra caractere a
 caractere. Quando a descrição passava da largura do terminal, cada quebra deixava o cursor
 algumas colunas antes do fim do texto. Os campos de texto longo (descrição, mensagem, título,
@@ -165,7 +211,7 @@ devolvido continua com espaços normais.
 arquivo vazio (sem os comentários do template) e usa o que o hook gravou, sem abrir o
 editor. É isso que o `npm run commit` usa.
 
-**Descrição em ADF.** A API v3 rejeita texto puro em `description`. O `adf.js` monta só o
+**Descrição em ADF.** A API v3 rejeita texto puro em `description`. O `core/adf.js` monta só o
 necessário: parágrafos, um título e uma lista com marcação de código.
 
 **Épico pelo nível da hierarquia.** O tipo épico se chama "Epic" numa instância e "Épico" em
@@ -215,12 +261,9 @@ cat /tmp/msg
 
 Nos dois casos, Ctrl+C no menu de atividades sai sem gravar a chave e não mexe no Jira.
 
-**Não há suíte de testes automatizados** (o `package.json` não tem script `test`). As
-**funções puras** são o ponto de partida para criar uma: `splitConventional`, `commitBody`,
-`resolvePrefix`, `capitalizeTitle`, `productOf`, `mostCommonProduct`, `matchIssues`, `projectSearchJql` (em
-`hook.js`), `filterChoices` e
-`detailLines` (`message.js`), `fromCz` (`init.js`), `buildTree` e `treeLines` (`tree.js`)
-e `commitDescription` (`adf.js`).
+**Testes automatizados:** `npm test` roda os testes da camada `core` com o `node:test`
+(sem dependências). Toda regra nova sem I/O deve entrar em `src/core/` com um teste em
+`test/core.test.js`. Os flows e o acesso ao Jira são testados à mão, como acima.
 
 > Atenção: criar atividades de teste mexe no Jira compartilhado do time. Use um título
 > óbvio ("[TESTE jira-commit] apagar") e apague depois.
