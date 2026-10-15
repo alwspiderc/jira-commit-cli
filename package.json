@@ -11,6 +11,9 @@
     "bin",
     "src"
   ],
+  "scripts": {
+    "test": "node --test"
+  },
   "engines": {
     "node": ">=22"
   },
