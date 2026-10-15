@@ -44,7 +44,8 @@ jira-commit-cli/
 │  │  ├─ issue-fields.js        Perguntas da criação: tipo, pai, épico, story points
 │  │  ├─ after-create.js        Sprint ativa e status inicial (falhas não abortam o commit)
 │  │  ├─ commit-questions.js    Questionário do commit (tipo, escopo, descrição) e corpo/BREAKING CHANGE
-│  │  └─ manual-key.js          Digitar a chave, validada no Jira
+│  │  ├─ manual-key.js          Digitar a chave, validada no Jira
+│  │  └─ comment.js             Comentário na atividade: pergunta e publica (falha não aborta)
 │  ├─ services/
 │  │  └─ issues.js              JQL das suas atividades (status por ID), busca no projeto, épicos, tipo de subtarefa
 │  ├─ core/
@@ -69,13 +70,14 @@ jira-commit-cli/
 │  │  ├─ index.js               Ponto único de import da camada
 │  │  ├─ theme.js               Cores, ícones e tema dos prompts
 │  │  ├─ prompts.js             Prompts com o tema, separadores e o campo de texto longo
+│  │  ├─ back.js                Esc em qualquer prompt com `back: true` devolve BACK
 │  │  ├─ search-select.js       Prompt do menu: filtro local na hora + busca remota em paralelo
 │  │  ├─ issue-lines.js         Desenha a árvore de atividades
 │  │  ├─ issue-choices.js       Árvore como opções do menu
 │  │  ├─ output.js              log, cabeçalho e cartão
 │  │  ├─ spinner.js             Spinner com ✔/✖ no fim
 │  │  └─ summary-card.js        Cartão final do hook
-│  ├─ utils/                    text.js (normalize, truncate), promise.js (inBackground)
+│  ├─ utils/                    text.js (normalize, truncate), promise.js (inBackground), steps.js (runSteps, BACK)
 │  └─ version.js
 ├─ test/core.test.js            Testes da camada core (node:test)
 └─ docs/
@@ -103,12 +105,14 @@ git commit  /  npm run commit (= git commit --no-edit, sem editor no fim)
             │     ├─ atividade escolhida ─────────┐
             │     ├─ ⋯ outros status → busca de novo com { all: true }
             │     ├─ ¶ detalhes → askDetails() → volta ao menu
+            │     ├─ ❝ comentário → askComment() → volta ao menu
             │     ├─ ✎ manual → input validado pelo regex da chave
             │     ├─ ↷ pular → grava sem chave (com o corpo, se houver)
             │     └─ + criar → createFromCommit()  ─┤
             │                                       ▼
             └─ 1ª linha = format com {key} {message} {prefix} {subject}, + detailLines()
                → grava o arquivo → setRepoState({ lastIssueByBranch })
+               → comentário? postComment() → addComment()   (falha não aborta)
                → git usa a mensagem nova → commit-msg (commitlint)
 ```
 
@@ -144,6 +148,7 @@ Todos ficam na API REST v3, com autenticação Basic (`email:token` em base64) e
 | `createIssue` | `POST /rest/api/3/issue` | Cria tarefa ou subtarefa |
 | `getTransitions` | `GET /rest/api/3/issue/{key}/transitions` | Opções de status inicial |
 | `transitionIssue` | `POST /rest/api/3/issue/{key}/transitions` | Aplica o status escolhido |
+| `addComment` | `POST /rest/api/3/issue/{key}/comment` | Publica o comentário escrito no menu (corpo em ADF) |
 | `storyPointsField` | `GET /rest/api/3/issue/createmeta/{key}/issuetypes/{id}` | Acha o campo de estimativa da tela de criação do tipo |
 | `activeSprint` | `GET /rest/agile/1.0/board?projectKeyOrId={key}` e `GET /rest/agile/1.0/board/{id}/sprint?state=active` | Sprint ativa do primeiro quadro do projeto que tiver uma |
 | `moveToSprint` | `POST /rest/agile/1.0/sprint/{id}/issue` | Põe a tarefa nova na sprint ativa |
@@ -206,6 +211,15 @@ algumas colunas antes do fim do texto. Os campos de texto longo (descrição, me
 corpo e BREAKING CHANGE) mostram o valor na linha de baixo e com espaços que não quebram (NBSP,
 só na tela), então a quebra cai exatamente na largura, onde o cursor é calculado. O valor
 devolvido continua com espaços normais.
+
+**Voltar com Esc (`back: true` e `runSteps`).** Um prompt criado com `back: true` escuta o Esc
+e cancela a si mesmo pelo `signal` do `@inquirer/core`. Em vez de erro, devolve o símbolo `BACK`
+e limpa o próprio desenho da tela (`clearPromptOnDone`, ligado só na hora do Esc). Os fluxos
+com várias perguntas (questionário do commit, corpo/BREAKING CHANGE, criação de atividade) são
+listas de passos para o `runSteps()`. Cada passo guarda a resposta em `key`, e um `BACK` volta
+ao último passo que de fato perguntou algo. Passos com `when` falso, como o escopo num projeto
+sem escopos ou o épico num projeto sem épicos, são pulados nos dois sentidos. O `resume` faz o
+questionário reabrir na descrição quando a pessoa volta do menu de atividades.
 
 **`git commit --no-edit` sem `-m`.** Sem `-m`, o git roda o `prepare-commit-msg` com o
 arquivo vazio (sem os comentários do template) e usa o que o hook gravou, sem abrir o

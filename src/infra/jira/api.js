@@ -145,6 +145,10 @@ export async function getTransitions(key) {
   return data.transitions.map((t) => ({ id: t.id, to: t.to?.name ?? t.name }));
 }
 
+export function addComment(key, body) {
+  return request(`/rest/api/3/issue/${enc(key)}/comment`, { method: 'POST', body: { body } });
+}
+
 export function transitionIssue(key, transitionId) {
   return request(`/rest/api/3/issue/${enc(key)}/transitions`, {
     method: 'POST',

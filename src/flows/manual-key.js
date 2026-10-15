@@ -1,5 +1,5 @@
 import { getIssue } from '../infra/jira/api.js';
-import { c, input } from '../ui/index.js';
+import { BACK, c, input } from '../ui/index.js';
 
 const NOT_FOUND = 404;
 
@@ -20,6 +20,8 @@ export async function manualKey(cfg, keyRegex, { offline = false } = {}) {
         return true; // erro de rede: aceita sem confirmar para não travar o commit
       }
     },
+    back: true,
   });
+  if (key === BACK) return BACK;
   return key ? { key: key.toUpperCase(), title } : null;
 }

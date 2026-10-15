@@ -2,7 +2,8 @@ import { matchIssues } from '../core/issue-match.js';
 import { projectSearchJql } from '../core/jql.js';
 import { getRepoState } from '../infra/storage/repo-state.js';
 import { findMyIssues, searchProject } from '../services/issues.js';
-import { c, issueChoices, LAST_TAG, log, notice, searchSelect, section, withSpinner } from '../ui/index.js';
+import { BACK, c, issueChoices, LAST_TAG, log, notice, searchSelect, section, withSpinner } from '../ui/index.js';
+import { askComment } from './comment.js';
 import { askDetails } from './commit-questions.js';
 import { createFromCommit } from './create-issue.js';
 import { manualKey } from './manual-key.js';
@@ -12,6 +13,7 @@ const ACTION = {
   TOGGLE_STATUSES: '__other__',
   MANUAL: '__manual__',
   DETAILS: '__details__',
+  COMMENT: '__comment__',
   SKIP: '__skip__',
 };
 const PAGE_SIZE = 15;
@@ -41,6 +43,11 @@ export async function chooseIssue(cfg, { commit, keyRegex, branch, prefetch }) {
 
     const choice = await issueMenu(context, issues, all);
     switch (choice) {
+      case BACK:
+        if (!all) return BACK;
+        all = false;
+        issues = null;
+        break;
       case ACTION.TOGGLE_STATUSES:
         all = !all;
         issues = null;
@@ -48,12 +55,23 @@ export async function chooseIssue(cfg, { commit, keyRegex, branch, prefetch }) {
       case ACTION.DETAILS:
         await askDetails(commit.details);
         break;
+      case ACTION.COMMENT: {
+        const comment = await askComment(commit.comment);
+        if (comment !== BACK) commit.comment = comment;
+        break;
+      }
       case ACTION.SKIP:
         return null;
-      case ACTION.MANUAL:
-        return manualKey(cfg, keyRegex);
-      case ACTION.NEW:
-        return createFromCommit(cfg, commit, issues, keyRegex);
+      case ACTION.MANUAL: {
+        const typed = await manualKey(cfg, keyRegex);
+        if (typed !== BACK) return typed;
+        break;
+      }
+      case ACTION.NEW: {
+        const created = await createFromCommit(cfg, commit, issues, keyRegex);
+        if (created !== BACK) return created;
+        break;
+      }
       default:
         return { key: choice, title: (issues.find((i) => i.key === choice) ?? context.found.get(choice))?.summary };
     }
@@ -74,7 +92,11 @@ function issueMenu({ cfg, commit, branchKey, lastKey, found }, issues, all) {
       ? [{ name: `${c.key(lastKey)}  ${LAST_TAG}`, short: lastKey, value: lastKey }]
       : [];
   const keys = new Set([...lastChoice, ...taskChoices].map((ch) => ch.value).filter(Boolean));
-  const actions = menuActions({ all, hasDetails: Boolean(commit.details.body || commit.details.breaking) });
+  const actions = menuActions({
+    all,
+    hasDetails: Boolean(commit.details.body || commit.details.breaking),
+    hasComment: Boolean(commit.comment),
+  });
 
   return searchSelect({
     message: `Qual atividade é esse commit? ${c.dim(`${all ? '· todos os status ' : ''}· digite para buscar`)}`,
@@ -89,6 +111,7 @@ function issueMenu({ cfg, commit, branchKey, lastKey, found }, issues, all) {
             ...lastChoice,
             ...taskChoices,
           ],
+    back: true,
     remote: async (term) => {
       const results = await searchProject(cfg, term);
       results.forEach((i) => found.set(i.key, i));
@@ -97,7 +120,7 @@ function issueMenu({ cfg, commit, branchKey, lastKey, found }, issues, all) {
   });
 }
 
-function menuActions({ all, hasDetails }) {
+function menuActions({ all, hasDetails, hasComment }) {
   return [
     {
       name: c.ok('+ Criar nova atividade'),
@@ -124,6 +147,12 @@ function menuActions({ all, hasDetails }) {
       short: 'Corpo / BREAKING CHANGE',
       value: ACTION.DETAILS,
       description: 'Texto mais longo e quebra de compatibilidade, os dois opcionais. Depois volta para esta lista',
+    },
+    {
+      name: c.accent(`❝ ${hasComment ? 'Editar comentário' : 'Comentar'} na atividade`),
+      short: 'Comentário na atividade',
+      value: ACTION.COMMENT,
+      description: 'Vai para a atividade que você escolher ou criar em seguida. Depois volta para esta lista',
     },
     {
       name: c.dim('↷ Pular'),

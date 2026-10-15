@@ -2,7 +2,7 @@ import { buildTree } from '../core/issue-tree.js';
 import { matchIssues } from '../core/issue-match.js';
 import { getRepoState } from '../infra/storage/repo-state.js';
 import { truncate } from '../utils/text.js';
-import { c, LAST_TAG, notice, searchSelect, section, select } from '../ui/index.js';
+import { BACK, c, LAST_TAG, notice, searchSelect, section, select } from '../ui/index.js';
 import { manualKey } from './manual-key.js';
 
 export const KIND = { SUBTASK: '__subtask__', TASK: '__task__' };
@@ -23,6 +23,7 @@ export function chooseKind(cfg) {
       },
       { name: `▣ ${cfg.issueType}`, value: KIND.TASK, description: 'Tarefa nova, num épico, já na sprint ativa' },
     ],
+    back: true,
   });
 }
 
@@ -40,18 +41,24 @@ export async function chooseParent(cfg, issues, keyRegex) {
     choices.unshift({ name: `${c.key(lastParent)}${lastTag}`, short: lastParent, value: lastParent });
   }
 
-  const choice = await select({
-    message: 'Subtarefa de qual tarefa?',
-    pageSize: PAGE_SIZE,
-    loop: false,
-    default: lastParent,
-    choices: [
-      { name: c.accent('✎ Digitar a chave da tarefa pai'), short: 'Digitar a chave', value: MANUAL },
-      section(`── tarefas (${choices.length})`),
-      ...choices,
-    ],
-  });
-  return choice === MANUAL ? manualKey(cfg, keyRegex) : { key: choice };
+  for (;;) {
+    const choice = await select({
+      message: 'Subtarefa de qual tarefa?',
+      pageSize: PAGE_SIZE,
+      loop: false,
+      default: lastParent,
+      choices: [
+        { name: c.accent('✎ Digitar a chave da tarefa pai'), short: 'Digitar a chave', value: MANUAL },
+        section(`── tarefas (${choices.length})`),
+        ...choices,
+      ],
+      back: true,
+    });
+    if (choice === BACK) return BACK;
+    if (choice !== MANUAL) return { key: choice };
+    const typed = await manualKey(cfg, keyRegex);
+    if (typed && typed !== BACK) return typed;
+  }
 }
 
 export async function chooseEpic({ epics, suggested, why }) {
@@ -74,7 +81,9 @@ export async function chooseEpic({ epics, suggested, why }) {
       const list = found.length ? found.map(option) : [notice('Nenhum épico encontrado')];
       return [...list, section('──'), none];
     },
+    back: true,
   });
+  if (choice === BACK) return BACK;
   return choice === NO_EPIC ? null : epics.find((e) => e.key === choice);
 }
 
@@ -86,6 +95,8 @@ export async function askStoryPoints(field) {
       { name: c.dim('— sem estimativa'), short: 'sem estimativa', value: null },
       ...STORY_POINTS.map((n) => ({ name: String(n), value: n })),
     ],
+    back: true,
   });
+  if (value === BACK) return BACK;
   return value === null ? null : { field, value };
 }

@@ -13,6 +13,7 @@ nova na hora, inclusive como subtarefa, a partir do commit.
   ⋯ Ver outros status
   ✎ Digitar a chave
   ¶ Adicionar corpo / BREAKING CHANGE
+  ❝ Comentar na atividade
   ↷ Pular
  ── suas atividades (31) ─────────────────
 ❯ LOJA-2375  LOJA DO BAIRRO | Mobile - Benefícios: Criar tela de…  Tarefas pendentes

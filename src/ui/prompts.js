@@ -1,8 +1,17 @@
 import * as inquirer from '@inquirer/prompts';
 import searchSelectPrompt from './search-select.js';
+import { withBack } from './back.js';
 import { c, promptTheme } from './theme.js';
 
-const themed = (fn) => (config) => fn({ ...config, theme: { ...promptTheme, ...config.theme } });
+const backTheme = {
+  style: { ...promptTheme.style, keysHelpTip: (keys) => promptTheme.style.keysHelpTip([...keys, ['esc', 'voltar']]) },
+};
+
+const themed = (fn) => (config, context) => {
+  const { back = false, ...rest } = config;
+  const run = (cfg, ctx) => fn({ ...cfg, theme: { ...promptTheme, ...(back && backTheme), ...cfg.theme } }, ctx);
+  return back ? withBack(run)(rest, context) : run(rest, context);
+};
 
 export const select = themed(inquirer.select);
 export const input = themed(inquirer.input);
@@ -23,4 +32,4 @@ export function fieldTransformer(value, { isFinal }) {
   return `\n${value.replaceAll(' ', ' ') || ' '}`;
 }
 
-export const field = (config) => input({ transformer: fieldTransformer, ...config });
+export const field = (config, context) => input({ transformer: fieldTransformer, ...config }, context);

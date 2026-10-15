@@ -7,38 +7,71 @@ import { activeSprint, createIssue, getIssue, storyPointsField } from '../infra/
 import { setRepoState } from '../infra/storage/repo-state.js';
 import { loadEpics, subtaskTypeName } from '../services/issues.js';
 import { inBackground } from '../utils/promise.js';
+import { BACK, exit, runSteps } from '../utils/steps.js';
 import { c, confirm, field, withSpinner } from '../ui/index.js';
 import { addToSprint, chooseInitialStatus } from './after-create.js';
 import { askStoryPoints, chooseEpic, chooseKind, chooseParent, KIND } from './issue-fields.js';
 
 export async function createFromCommit(cfg, commit, issues, keyRegex) {
   const epicsLookup = loadEpics(cfg).catch(() => null);
-  const kind = await chooseKind(cfg);
-
-  let parent = null;
-  if (kind === KIND.SUBTASK) {
-    parent = await loadParent(cfg, issues, keyRegex);
-    if (!parent) return null;
-  }
-
-  const epics = kind === KIND.TASK ? await withSpinner('Buscando os épicos…', () => epicsLookup) : null;
-  const epic = epics ? await chooseEpic(epics) : null;
-
-  const lookups = startLookups(cfg, parent);
   const files = stagedFiles();
-  const summary = await askTitle(cfg, { commit, parent, issues, files });
+  const lookupsFor = cached((parent) => startLookups(cfg, parent));
+  const suggestionFor = cached((parent) => suggestTitleFor(cfg, { commit, parent, files }));
+  let epicsData = null;
 
+  const answers = await runSteps([
+    { key: 'kind', run: () => chooseKind(cfg) },
+    {
+      key: 'parent',
+      when: (s) => s.kind === KIND.SUBTASK,
+      run: () => loadParent(cfg, issues, keyRegex),
+    },
+    {
+      key: 'epic',
+      when: async (s) => {
+        if (s.kind !== KIND.TASK) return false;
+        epicsData = await withSpinner('Buscando os épicos…', () => epicsLookup);
+        return Boolean(epicsData?.epics.length);
+      },
+      run: () => chooseEpic(epicsData),
+    },
+    {
+      key: 'summary',
+      run: async (s) => askTitle(cfg, { commit, issues, parent: parentOf(s), suggestion: await suggestionFor(parentOf(s)) }),
+    },
+    {
+      key: 'storyPoints',
+      when: async (s) => Boolean(await lookupsFor(parentOf(s)).pointsField),
+      run: async (s) => askStoryPoints(await lookupsFor(parentOf(s)).pointsField),
+    },
+    {
+      run: async (s) => {
+        const { issueType, sprint } = lookupsFor(parentOf(s));
+        const ok = await confirmCreation(cfg, {
+          parent: parentOf(s),
+          issueType: await issueType,
+          epic: epicOf(s),
+          sprint: await sprint,
+        });
+        return ok === false ? exit(BACK) : ok;
+      },
+    },
+  ]);
+  if (answers === BACK) return BACK;
+
+  const parent = parentOf(answers);
+  const epic = epicOf(answers);
+  const storyPoints = answers.storyPoints ?? null;
+  const lookups = lookupsFor(parent);
   const issueType = await lookups.issueType;
-  const storyPoints = await askStoryPoints(await lookups.pointsField);
   const sprint = await lookups.sprint;
-  if (!(await confirmCreation(cfg, { parent, issueType, epic, sprint }))) return null;
 
   const key = await withSpinner(
     'Criando no Jira…',
     () =>
       createIssue({
         projectKey: cfg.projectKey,
-        summary,
+        summary: answers.summary,
         issueType,
         parentKey: parent?.key,
         epicKey: epic?.key,
@@ -51,13 +84,13 @@ export async function createFromCommit(cfg, commit, issues, keyRegex) {
     { done: (k) => `${c.key(k)} criada no Jira` },
   );
   if (parent) setRepoState({ lastParent: parent.key });
-  if (epics?.epics.length) setRepoState({ lastEpic: epic?.key ?? null }); // "sem épico" também é lembrado
+  if (!parent && epicsData?.epics.length) setRepoState({ lastEpic: epic?.key ?? null }); // "sem épico" também é lembrado
 
   const inSprint = sprint && (await addToSprint(sprint, key));
   const movedTo = await chooseInitialStatus(key);
   return {
     key,
-    title: summary,
+    title: answers.summary,
     created: true,
     parentKey: parent?.key,
     movedTo,
@@ -67,9 +100,23 @@ export async function createFromCommit(cfg, commit, issues, keyRegex) {
   };
 }
 
+// voltar e trocar o tipo deixa no state a resposta do outro caminho: só vale a do tipo atual
+const parentOf = (s) => (s.kind === KIND.SUBTASK ? s.parent : null);
+const epicOf = (s) => (s.kind === KIND.TASK ? (s.epic ?? null) : null);
+
+function cached(fn) {
+  const cache = new Map();
+  return (parent) => {
+    const id = parent?.key ?? null;
+    if (!cache.has(id)) cache.set(id, fn(parent));
+    return cache.get(id);
+  };
+}
+
 async function loadParent(cfg, issues, keyRegex) {
   const chosen = await chooseParent(cfg, issues, keyRegex);
-  return chosen && withSpinner(`Carregando ${chosen.key}…`, () => getIssue(chosen.key));
+  if (chosen === BACK) return BACK;
+  return withSpinner(`Carregando ${chosen.key}…`, () => getIssue(chosen.key));
 }
 
 function startLookups(cfg, parent) {
@@ -84,22 +131,25 @@ function startLookups(cfg, parent) {
   };
 }
 
-async function askTitle(cfg, { commit, parent, issues, files }) {
-  const suggestion = aiEnabled(cfg)
-    ? await withSpinner(
-        'Pedindo uma sugestão de título à IA…',
-        () => suggestTitle(cfg, { diff: stagedDiff(), files, subject: commit.subject, parentSummary: parent?.summary }),
-        { done: (s) => c.dim(s ? 'Sugestão da IA pronta' : 'Sem sugestão da IA, usando o commit') },
-      )
-    : null;
-  const prefix = resolvePrefix(cfg.summaryPrefix, parent ? productOf(parent.summary) : mostCommonProduct(issues));
+function suggestTitleFor(cfg, { commit, parent, files }) {
+  if (!aiEnabled(cfg)) return Promise.resolve(null);
+  return withSpinner(
+    'Pedindo uma sugestão de título à IA…',
+    () => suggestTitle(cfg, { diff: stagedDiff(), files, subject: commit.subject, parentSummary: parent?.summary }),
+    { done: (s) => c.dim(s ? 'Sugestão da IA pronta' : 'Sem sugestão da IA, usando o commit') },
+  );
+}
 
+async function askTitle(cfg, { commit, issues, parent, suggestion }) {
+  const prefix = resolvePrefix(cfg.summaryPrefix, parent ? productOf(parent.summary) : mostCommonProduct(issues));
   const title = await field({
     message: suggestion ? `Título ${c.dim('· sugerido pela IA')}` : 'Título',
     default: capitalizeTitle(prefix + (suggestion ?? commit.subject), prefix),
     prefill: 'editable',
     validate: (v) => v.trim().length > 0 || 'O título não pode ficar vazio',
+    back: true,
   });
+  if (title === BACK) return BACK;
   return capitalizeTitle(title.trim(), prefix);
 }
 
@@ -109,7 +159,7 @@ function confirmCreation(cfg, { parent, issueType, epic, sprint }) {
     : `${issueType} em ${c.key(cfg.projectKey)}` +
       (epic ? ` no épico ${c.key(epic.key)}` : '') +
       (sprint ? ` na ${c.accent(sprint.name)}` : '');
-  return confirm({ message: `Criar ${where}?`, default: true });
+  return confirm({ message: `Criar ${where}?`, default: true, back: true });
 }
 
 function fullBody(commit) {

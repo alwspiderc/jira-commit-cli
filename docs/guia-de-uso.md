@@ -250,6 +250,7 @@ O menu tem duas partes: **ações** no topo e **atividades** em árvore embaixo.
   ⋯ Ver outros status
   ✎ Digitar a chave
   ¶ Adicionar corpo / BREAKING CHANGE
+  ❝ Comentar na atividade
   ↷ Pular
  ── suas atividades (31) ─────────────────
 ❯ LOJA-2375  LOJA DO BAIRRO | Mobile - Benefícios: Criar tela de…  Tarefas pendentes
@@ -329,7 +330,15 @@ exemplo), aparece no topo das atividades. Sem histórico, o cursor começa na pr
 | ⋯ Ver outros status | Mostra todas as suas atividades abertas |
 | ✎ Digitar a chave | Para uma atividade que não é sua ou não aparece na lista. A CLI confere se a chave existe no Jira |
 | ¶ Adicionar corpo / BREAKING CHANGE | Pergunta o corpo do commit (use `\|` para quebrar linha) e o BREAKING CHANGE, os dois opcionais, e volta para o menu. Depois de preenchido, vira "¶ Editar…" |
+| ❝ Comentar na atividade | Pergunta um comentário (use `\|` para quebrar parágrafo) e volta para o menu. Ele é publicado na atividade que você escolher, digitar ou criar em seguida. Se falhar, só avisa: o commit segue. Depois de preenchido, vira "❝ Editar comentário…" |
 | ↷ Pular | Commita sem chave (o commitlint/cz do projeto pode reclamar) |
+
+**Voltar com Esc:** em qualquer pergunta, **Esc** volta ao passo anterior, e o que você já
+respondeu continua preenchido. No menu de atividades, o Esc volta para a descrição do commit
+(ou, em "todos os status", para os status padrão). Durante a criação de uma atividade, o Esc
+volta uma pergunta por vez (confirmação → story points → título → épico ou pai → tipo) até o menu. Responder "não" na
+confirmação também volta para o menu. Depois que a atividade é criada no Jira não há volta: o
+status inicial já é sobre a atividade criada.
 
 ## 8. Criar atividade a partir do commit
 

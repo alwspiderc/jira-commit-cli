@@ -13,7 +13,8 @@ import { capitalizeTitle, mostCommonProduct, productOf, resolvePrefix } from '..
 import { buildTree } from '../src/core/issue-tree.js';
 import { matchIssues, rankChoices } from '../src/core/issue-match.js';
 import { myIssuesJql, projectSearchJql } from '../src/core/jql.js';
-import { commitDescription } from '../src/core/adf.js';
+import { commentDocument, commitDescription } from '../src/core/adf.js';
+import { BACK, exit, runSteps } from '../src/utils/steps.js';
 
 describe('commit-message', () => {
   it('separa o prefixo Conventional Commits', () => {
@@ -153,5 +154,61 @@ describe('adf', () => {
     );
     assert.deepEqual(doc.content[3].content[0].content[0].content[0].marks, [{ type: 'code' }]);
     assert.equal(commitDescription({}), undefined);
+  });
+
+  it('monta o comentário com | quebrando parágrafo', () => {
+    const doc = commentDocument('primeira | segunda');
+    assert.deepEqual(
+      doc.content.map((p) => p.content[0].text),
+      ['primeira', 'segunda'],
+    );
+    assert.equal(commentDocument('  |  '), undefined);
+  });
+});
+
+describe('runSteps', () => {
+  const answer = (...values) => {
+    const queue = [...values];
+    return () => queue.shift();
+  };
+
+  it('volta ao passo anterior e guarda só as respostas válidas', async () => {
+    const a = answer('a1', 'a2');
+    const b = answer(BACK, 'b2');
+    const state = await runSteps([
+      { key: 'a', run: a },
+      { key: 'b', run: b },
+    ]);
+    assert.deepEqual(state, { a: 'a2', b: 'b2' });
+  });
+
+  it('pula passos com when falso também na volta', async () => {
+    const c = answer(BACK, 'c2');
+    const a = answer('a1', 'a2');
+    const state = await runSteps([
+      { key: 'a', run: a },
+      { key: 'b', when: () => false, run: () => 'nunca' },
+      { key: 'c', run: c },
+    ]);
+    assert.deepEqual(state, { a: 'a2', c: 'c2' });
+  });
+
+  it('devolve BACK no primeiro passo e o valor de exit', async () => {
+    assert.equal(await runSteps([{ run: () => BACK }]), BACK);
+    assert.equal(await runSteps([{ run: () => exit('saiu') }, { run: () => assert.fail() }]), 'saiu');
+  });
+
+  it('com resume começa no último passo e volta para os anteriores', async () => {
+    const calls = [];
+    const state = await runSteps(
+      [
+        { key: 'a', run: () => (calls.push('a'), 'a2') },
+        { key: 'b', run: () => (calls.push('b'), calls.length === 1 ? BACK : 'b2') },
+      ],
+      { a: 'a1', b: 'b1' },
+      { resume: true },
+    );
+    assert.deepEqual(calls, ['b', 'a', 'b']);
+    assert.deepEqual(state, { a: 'a2', b: 'b2' });
   });
 });
