@@ -378,8 +378,13 @@ O campo já vem **preenchido e editável**: prefixo + texto do commit (ou a suge
 [seção 9](#9-sugestão-de-título-por-ia)). Ajuste o que quiser e confirme com Enter.
 
 ```text
-◆ Título · sugerido pela IA  LOJA DO BAIRRO | Mobile: Criar card de benefício na Home▌
+◆ Título · sugerido pela IA
+LOJA DO BAIRRO | Mobile: Criar card de benefício na Home▌
 ```
+
+O nome da atividade sempre começa com **maiúscula** depois do prefixo, mesmo que o commit
+venha em minúscula ou que você edite em minúscula: `atualiza link` vira
+"LOJA DO BAIRRO | Mobile: Atualiza link".
 
 <a id="prefixo-do-título"></a>
 **Prefixo do título.** Vem do `summaryPrefix`. O `{product}` é substituído pelo trecho do

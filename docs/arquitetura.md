@@ -217,7 +217,7 @@ Nos dois casos, Ctrl+C no menu de atividades sai sem gravar a chave e não mexe 
 
 **Não há suíte de testes automatizados** (o `package.json` não tem script `test`). As
 **funções puras** são o ponto de partida para criar uma: `splitConventional`, `commitBody`,
-`resolvePrefix`, `productOf`, `mostCommonProduct`, `matchIssues`, `projectSearchJql` (em
+`resolvePrefix`, `capitalizeTitle`, `productOf`, `mostCommonProduct`, `matchIssues`, `projectSearchJql` (em
 `hook.js`), `filterChoices` e
 `detailLines` (`message.js`), `fromCz` (`init.js`), `buildTree` e `treeLines` (`tree.js`)
 e `commitDescription` (`adf.js`).

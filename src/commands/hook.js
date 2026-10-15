@@ -398,14 +398,18 @@ async function createFromCommit(cfg, commit, issues, keyRegex) {
     : null;
   const prefix = resolvePrefix(cfg.summaryPrefix, parent ? productOf(parent.summary) : mostCommonProduct(issues));
 
-  const summary = (
-    await field({
-      message: suggestion ? `Título ${c.dim('· sugerido pela IA')}` : 'Título',
-      default: prefix + (suggestion ?? commit.subject),
-      prefill: 'editable',
-      validate: (v) => v.trim().length > 0 || 'O título não pode ficar vazio',
-    })
-  ).trim();
+  // o commit vem em minúscula ("atualiza link"), mas o nome da atividade começa com maiúscula
+  const summary = capitalizeTitle(
+    (
+      await field({
+        message: suggestion ? `Título ${c.dim('· sugerido pela IA')}` : 'Título',
+        default: capitalizeTitle(prefix + (suggestion ?? commit.subject), prefix),
+        prefill: 'editable',
+        validate: (v) => v.trim().length > 0 || 'O título não pode ficar vazio',
+      })
+    ).trim(),
+    prefix,
+  );
 
   const issueType = await issueTypePromise;
   const storyPoints = await askStoryPoints(await pointsLookup);
@@ -588,6 +592,16 @@ async function subtaskTypeName(cfg) {
 }
 
 /** "{product} | Mobile: " + "LOJA DO BAIRRO" → "LOJA DO BAIRRO | Mobile: " (sem produto, sem prefixo) */
+/**
+ * Primeira letra do nome em maiúscula, depois do prefixo:
+ * "LOJA DO BAIRRO | Mobile: atualiza link" → "LOJA DO BAIRRO | Mobile: Atualiza link".
+ * Sem o prefixo no começo (a pessoa apagou ou mudou), vale a primeira letra do título.
+ */
+export function capitalizeTitle(title, prefix = '') {
+  const head = prefix && title.startsWith(prefix) ? prefix : '';
+  return head + title.slice(head.length).replace(/^(\s*)(\p{Ll})/u, (_, space, letter) => space + letter.toUpperCase());
+}
+
 export function resolvePrefix(template, product) {
   if (!template) return '';
   if (!template.includes('{product}')) return template;
