@@ -1,6 +1,6 @@
 # jira-commit-cli
 
-Liga cada commit a uma atividade do Jira Cloud. Na hora do `git commit`, mostra as suas
+Liga cada commit a uma atividade do Jira (Cloud ou Server/Data Center). Na hora do `git commit`, mostra as suas
 atividades em árvore (tarefas com as subtarefas embaixo) para você escolher, ou cria uma
 nova na hora, inclusive como subtarefa, a partir do commit.
 

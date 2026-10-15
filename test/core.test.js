@@ -14,7 +14,9 @@ import { capitalizeTitle, mostCommonProduct, productOf, resolvePrefix } from '..
 import { buildTree } from '../src/core/issue-tree.js';
 import { matchIssues, rankChoices } from '../src/core/issue-match.js';
 import { myIssuesJql, projectSearchJql } from '../src/core/jql.js';
-import { commentDocument, commitDescription } from '../src/core/adf.js';
+import { adfDocument } from '../src/core/adf.js';
+import { bodyParagraphs, commentParagraphs } from '../src/core/document.js';
+import { wikiText } from '../src/core/wiki.js';
 import { validate } from '../src/core/validate.js';
 import { BACK, exit, runSteps } from '../src/utils/steps.js';
 
@@ -152,24 +154,29 @@ describe('jql', () => {
   });
 });
 
-describe('adf', () => {
-  it('monta parágrafos e a lista de arquivos', () => {
-    const doc = commitDescription({ body: 'um\n\ndois', files: ['M a.js'] });
+describe('documento', () => {
+  it('separa os parágrafos do corpo e do comentário', () => {
+    assert.deepEqual(bodyParagraphs('um\n\n dois \n\n\n'), ['um', 'dois']);
+    assert.deepEqual(commentParagraphs('primeira | segunda |  '), ['primeira', 'segunda']);
+    assert.deepEqual(commentParagraphs('  |  '), []);
+  });
+
+  it('monta o ADF com parágrafos e a lista de arquivos', () => {
+    const doc = adfDocument({ paragraphs: ['um', 'dois'], files: ['M a.js'] });
     assert.deepEqual(
       doc.content.map((n) => n.type),
       ['paragraph', 'paragraph', 'heading', 'bulletList'],
     );
     assert.deepEqual(doc.content[3].content[0].content[0].content[0].marks, [{ type: 'code' }]);
-    assert.equal(commitDescription({}), undefined);
+    assert.equal(adfDocument({}), undefined);
   });
 
-  it('monta o comentário com | quebrando parágrafo', () => {
-    const doc = commentDocument('primeira | segunda');
-    assert.deepEqual(
-      doc.content.map((p) => p.content[0].text),
-      ['primeira', 'segunda'],
+  it('monta o wiki markup do Jira Server', () => {
+    assert.equal(
+      wikiText({ paragraphs: ['um', 'dois'], files: ['M a.js'] }),
+      'um\n\ndois\n\nh4. Arquivos alterados\n\n* {{M a.js}}',
     );
-    assert.equal(commentDocument('  |  '), undefined);
+    assert.equal(wikiText({}), undefined);
   });
 });
 

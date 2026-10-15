@@ -46,8 +46,8 @@ existentes e não comenta no Jira.
 |---|---|
 | Node.js | 22 ou mais novo (`node -v`) |
 | Git | Qualquer versão recente. No Windows, use o **Git Bash** ou o terminal integrado do VS Code |
-| Conta Atlassian | Com acesso ao projeto do Jira |
-| API token | Gerado em <https://id.atlassian.com/manage-profile/security/api-tokens> |
+| Jira | **Cloud** (`*.atlassian.net`) ou **Server / Data Center** (8.4 ou mais novo), com acesso ao projeto |
+| Token | Cloud: API token, gerado em <https://id.atlassian.com/manage-profile/security/api-tokens>. Server/DC: token pessoal (PAT), criado no seu perfil do Jira |
 
 ## 3. Instalação
 
@@ -100,13 +100,15 @@ Deve aparecer a ajuda com os comandos `login`, `init` e `list`.
 npx --no-install jira-commit login
 ```
 
-| Pergunta | Exemplo |
-|---|---|
-| URL do Jira | `https://suaempresa.atlassian.net` |
-| E-mail da conta Atlassian | `voce@empresa.com` |
-| API token | o token gerado no passo 2 (fica mascarado) |
+O `login` descobre sozinho se o Jira é Cloud ou Server/Data Center e pede as credenciais certas:
 
-No fim ele testa a conexão e mostra `✔ Conectado como <seu nome>`.
+| Pergunta | Jira Cloud | Jira Server / Data Center |
+|---|---|---|
+| URL do Jira | `https://suaempresa.atlassian.net` | `https://jira.suaempresa.com.br` |
+| E-mail | `voce@empresa.com` | *(não pergunta)* |
+| Token (fica mascarado) | API token do passo 2 | Token pessoal (PAT): no Jira, seu perfil → **Tokens de acesso pessoal** |
+
+No fim ele testa a conexão e mostra `✔ Conectado como <seu nome>`. Só então o token é salvo.
 
 **Mais de um Jira** (ex.: um para cada cliente): rode o `login` de novo para cada um. O token
 só é salvo depois que a conexão funciona. O primeiro Jira vira o padrão, e cada repositório

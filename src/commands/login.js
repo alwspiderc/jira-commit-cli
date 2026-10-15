@@ -1,7 +1,7 @@
 import { getMyself } from '../infra/jira/api.js';
-import { useSite } from '../infra/jira/client.js';
+import { deploymentType, useSite } from '../infra/jira/client.js';
 import { listSites, normalizeUrl, saveSite } from '../infra/storage/credentials.js';
-import { c, confirm, header, input, log, password, withSpinner } from '../ui/index.js';
+import { c, confirm, header, input, log, password, select, withSpinner } from '../ui/index.js';
 
 const TOKEN_PAGE = 'https://id.atlassian.com/manage-profile/security/api-tokens';
 
@@ -16,10 +16,8 @@ export async function login() {
       validate: (v) => /^https?:\/\/.+/.test(v.trim()) || 'Use a URL completa, com https://',
     }),
   );
-  const email = await input({ message: 'E-mail da conta Atlassian' });
-  log.hint(`Gere o token em ${TOKEN_PAGE}`);
-  const token = await password({ message: 'API token', mask: '•' });
-  const site = { url, type: 'cloud', email, token };
+  const type = await detectType(url);
+  const site = type === 'cloud' ? await askCloud(url) : await askServer(url);
 
   useSite(site);
   const me = await withSpinner('Testando a conexão…', () => getMyself());
@@ -36,6 +34,36 @@ export async function login() {
   if (others.length) log.hint(`Num repositório de outro Jira, defina "jiraUrl" no .jira-commit.json (o init faz isso).`);
   log.hint('Próximo passo, em cada repositório: jira-commit init');
   console.log();
+}
+
+async function detectType(url) {
+  try {
+    return await withSpinner('Identificando o Jira…', () => deploymentType(url), {
+      done: (type) => (type === 'cloud' ? 'Jira Cloud' : 'Jira Server / Data Center'),
+    });
+  } catch {
+    if (/\.atlassian\.net$/.test(new URL(url).hostname)) return 'cloud';
+    return select({
+      message: 'Que Jira é esse?',
+      choices: [
+        { name: 'Jira Cloud', value: 'cloud', description: 'Endereço *.atlassian.net, login com e-mail e API token' },
+        { name: 'Jira Server / Data Center', value: 'server', description: 'Instalado na empresa, login com token pessoal' },
+      ],
+    });
+  }
+}
+
+async function askCloud(url) {
+  const email = await input({ message: 'E-mail da conta Atlassian' });
+  log.hint(`Gere o token em ${TOKEN_PAGE}`);
+  const token = await password({ message: 'API token', mask: '•' });
+  return { url, type: 'cloud', email, token };
+}
+
+async function askServer(url) {
+  log.hint('Crie um token pessoal no Jira: seu perfil → Tokens de acesso pessoal');
+  const token = await password({ message: 'Token pessoal (PAT)', mask: '•' });
+  return { url, type: 'server', token };
 }
 
 function showSites(sites) {

@@ -29,6 +29,14 @@ export function issueUrl(key) {
   }
 }
 
+// Público no Cloud e no Server: diz o tipo antes de a pessoa informar as credenciais
+export async function deploymentType(url) {
+  const res = await fetch(`${url}/rest/api/2/serverInfo`, { signal: AbortSignal.timeout(TIMEOUT_MS) });
+  if (!res.ok) throw new JiraError(res.status, `Jira respondeu ${res.status} em ${url}`);
+  const { deploymentType: type } = await res.json();
+  return type === 'Cloud' ? 'cloud' : 'server';
+}
+
 function authorization({ type, email, token }) {
   if (type === 'server') return `Bearer ${token}`;
   return `Basic ${Buffer.from(`${email}:${token}`).toString('base64')}`;

@@ -1,4 +1,4 @@
-import { commentDocument } from '../core/adf.js';
+import { commentParagraphs } from '../core/document.js';
 import { addComment } from '../infra/jira/api.js';
 import { BACK, c, field, log, withSpinner } from '../ui/index.js';
 
@@ -13,9 +13,9 @@ export async function askComment(current = '') {
 }
 
 export async function sendComment(key, text) {
-  const body = commentDocument(text);
-  if (!body) return false;
-  await withSpinner('Comentando no Jira…', () => addComment(key, body), {
+  const paragraphs = commentParagraphs(text);
+  if (!paragraphs.length) return false;
+  await withSpinner('Comentando no Jira…', () => addComment(key, paragraphs), {
     done: `Comentário adicionado em ${c.key(key)}`,
   });
   return true;

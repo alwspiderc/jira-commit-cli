@@ -1,4 +1,4 @@
-import { commitDescription } from '../core/adf.js';
+import { bodyParagraphs } from '../core/document.js';
 import { detailLines } from '../core/commit-message.js';
 import { capitalizeTitle, mostCommonProduct, productOf, resolvePrefix } from '../core/issue-title.js';
 import { aiEnabled, suggestTitle } from '../infra/ai.js';
@@ -75,7 +75,7 @@ export async function createFromCommit(cfg, commit, issues, keyRegex) {
         issueType,
         parentKey: parent?.key,
         epicKey: epic?.key,
-        description: commitDescription({ body: fullBody(commit), files }),
+        description: { paragraphs: bodyParagraphs(fullBody(commit)), files },
         // a sprint o Jira herda do pai; labels e componentes, não
         labels: parent?.labels,
         components: parent?.components,

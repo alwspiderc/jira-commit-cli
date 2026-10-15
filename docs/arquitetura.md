@@ -62,7 +62,8 @@ jira-commit-cli/
 │  │  └─ adf.js                 Descrição em Atlassian Document Format
 │  ├─ infra/
 │  │  ├─ jira/client.js         Site atual (useSite), requisição autenticada, timeout e JiraError (com o status HTTP)
-│  │  ├─ jira/api.js            Endpoints da API REST v3 e Agile
+│  │  ├─ jira/api.js            Endpoints do Jira (REST e Agile), escritos uma vez para os dois tipos de Jira
+│  │  ├─ jira/dialects.js       O que muda entre Cloud e Server/DC: versão da API, busca, responsável, texto, épico
 │  │  ├─ storage/               credentials.js (vários Jiras), repo-state.js, project-config.js
 │  │  ├─ git.js                 Raiz do repo, branch, arquivos, diff do stage e descrições recentes
 │  │  ├─ git-hook.js            Lê e instala o prepare-commit-msg (Husky ou .git/hooks)
@@ -141,8 +142,10 @@ tipo? ── subtarefa ── chooseParent() ── getIssue(pai)   (labels, com
 
 ## Endpoints do Jira usados
 
-Todos ficam na API REST v3, com autenticação Basic (`email:token` em base64) e timeout de
-10s por requisição (`TIMEOUT_MS` em `infra/jira/client.js`).
+No **Cloud**, os caminhos são da API REST v3, com autenticação Basic (`email:token` em base64).
+No **Server/Data Center**, da API v2 com `Authorization: Bearer <PAT>` (veja "Cloud e Server"
+abaixo). Timeout de 10s por requisição (`TIMEOUT_MS` em `infra/jira/client.js`). A tabela
+mostra os caminhos do Cloud.
 
 | Função | Método e caminho | Uso |
 |---|---|---|
@@ -233,6 +236,22 @@ o `.git/hooks` não é. O `init` instala o Husky, grava `"prepare": "husky"` e r
 porque cria um `pre-commit` com `npm test`, que mudaria o commit de todo mundo sem ninguém
 pedir. A CLI entra no `package.json` pelo `repository.url` do próprio `package.json` dela
 (`src/version.js`), e todos os pacotes aprovados vão numa instalação só.
+
+**Cloud e Server: um dialeto por tipo de Jira.** O `api.js` é escrito uma vez, e o que muda
+fica no `dialects.js`, escolhido pelo `type` do site:
+
+| Ponto | Cloud | Server / Data Center |
+|---|---|---|
+| Base e busca | `/rest/api/3`, `GET /search/jql` | `/rest/api/2`, `GET /search` |
+| Responsável | `{ accountId }` | `{ name }` |
+| Descrição e comentário | ADF (`core/adf.js`) | wiki markup (`core/wiki.js`) |
+| Tipo épico | `hierarchyLevel` 1 | nome `Epic` / `Épico` |
+| Tarefa no épico | campo `parent` | campo "Epic Link" (achado em `/field` pelo `schema.custom`) |
+
+Os flows não montam mais ADF. Eles mandam `{ paragraphs, files }` (`core/document.js`), e o
+dialeto formata. O tipo é descoberto no `login` pelo `GET /rest/api/2/serverInfo`, que é
+público nos dois. Os testes de `test/jira.test.js` trocam o `fetch` e conferem URL,
+autenticação e corpo das chamadas nos dois dialetos. Não há um Jira Server de teste.
 
 **Um schema para validar e para o editor.** O `.jira-commit.json` é descrito num JSON Schema,
 que o editor usa para o autocomplete. O `core/validate.js` lê esse mesmo arquivo e implementa só
