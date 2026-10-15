@@ -5,6 +5,8 @@ import { commitlintReadsConfig, loadCzConfig, usesCommitlint } from '../infra/co
 import { repoRoot } from '../infra/git.js';
 import { hookHasCz, installHook } from '../infra/git-hook.js';
 import { issueTypes } from '../infra/jira/api.js';
+import { useSite } from '../infra/jira/client.js';
+import { listSites } from '../infra/storage/credentials.js';
 import { addDevCommand, binCommand, detectPackageManager, run } from '../infra/package-manager.js';
 import { hasDependency, readPackage, setScript, withHusky } from '../infra/package-json.js';
 import {
@@ -130,6 +132,8 @@ async function askProjectConfig(commitlint) {
       validate: (v) => /^[A-Z][A-Z0-9]+$/.test(v.toUpperCase()) || 'Chave inválida',
     })
   ).toUpperCase();
+  const jiraUrl = await askJiraUrl();
+  useSite(jiraUrl);
   const issueType = await askIssueType(projectKey);
   const summaryPrefix = await input({
     message: `Prefixo do título ${c.dim('· {product} = produto da tarefa pai, vazio = sem prefixo')}`,
@@ -139,7 +143,17 @@ async function askProjectConfig(commitlint) {
     message: `Formato da mensagem ${c.dim('· {key} {message} {prefix} {subject}')}`,
     default: commitlint ? '{prefix}{key} {subject}' : '{key}: {message}',
   });
-  return { projectKey, issueType, summaryPrefix, format };
+  return { projectKey, ...(jiraUrl && { jiraUrl }), issueType, summaryPrefix, format };
+}
+
+async function askJiraUrl() {
+  const sites = listSites();
+  if (sites.length <= 1) return sites[0]?.url;
+  return select({
+    message: 'Qual Jira este repositório usa?',
+    choices: sites.map((s) => ({ name: `${s.url}${s.isDefault ? c.dim('  · padrão') : ''}`, value: s.url })),
+    default: sites.find((s) => s.isDefault)?.url,
+  });
 }
 
 async function askIssueType(projectKey) {

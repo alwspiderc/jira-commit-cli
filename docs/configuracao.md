@@ -55,6 +55,7 @@ As regras ficam em [`schema/jira-commit.schema.json`](../schema/jira-commit.sche
 | Campo | Tipo | Padrão | Descrição |
 |---|---|---|---|
 | `projectKey` | string | — **obrigatório** | Chave do projeto no Jira. Ex.: `LOJA` |
+| `jiraUrl` | string | *(o Jira padrão do login)* | Jira deste repositório, quando você tem mais de um salvo. Ex.: `https://jira.cliente.com.br` |
 | `issueType` | string | `"Task"` | Tipo usado ao criar uma **tarefa sem pai**. Precisa existir no projeto (ex.: `Mobile`, `Backend`) |
 | `subtaskType` | string | descoberto no Jira | Tipo usado para **subtarefa**. Só defina se o projeto tiver mais de um tipo de subtarefa |
 | `summaryPrefix` | string | *(sem prefixo)* | Prefixo do título de atividades criadas. Aceita `{product}` |
@@ -144,21 +145,33 @@ Se você definir `jql`, ele é usado exatamente como está na busca padrão. Nes
 
 ## Credenciais
 
-`~/.config/jira-commit/credentials.json`, criado pelo `jira-commit login`:
+`~/.config/jira-commit/credentials.json`, criado pelo `jira-commit login`. Ele guarda **um ou
+mais Jiras** (ex.: um por cliente), cada um com o seu token:
 
 ```json
 {
-  "baseUrl": "https://suaempresa.atlassian.net",
-  "email": "voce@empresa.com",
-  "token": "ATATT3x..."
+  "default": "https://suaempresa.atlassian.net",
+  "sites": {
+    "https://suaempresa.atlassian.net": { "type": "cloud", "email": "voce@empresa.com", "token": "ATATT3x..." },
+    "https://jira.cliente.com.br": { "type": "server", "token": "NjM2..." }
+  }
 }
 ```
 
-| Variável de ambiente | Substitui |
+- Cada `jira-commit login` adiciona um Jira ou troca o token de um que já está salvo. O
+  primeiro vira o **padrão**; nos seguintes, o login pergunta se você quer trocar o padrão.
+- Um repositório usa o Jira do campo `jiraUrl` do `.jira-commit.json`. Sem esse campo, usa o
+  padrão. O `init` grava o `jiraUrl` e pergunta qual Jira usar quando há mais de um salvo.
+- `type` é `cloud` (e-mail + API token) ou `server` (Jira Server/Data Center, token pessoal).
+- O formato antigo, de um Jira só (`baseUrl`, `email`, `token`), é convertido sozinho na
+  primeira leitura.
+
+| Variável de ambiente | Uso |
 |---|---|
-| `JIRA_BASE_URL` | `baseUrl` |
-| `JIRA_EMAIL` | `email` |
-| `JIRA_API_TOKEN` | `token` |
+| `JIRA_BASE_URL` | Endereço do Jira |
+| `JIRA_EMAIL` | E-mail (Cloud) |
+| `JIRA_API_TOKEN` | Token. Com ele definido, as variáveis valem no lugar do arquivo |
+| `JIRA_TYPE` | `cloud` ou `server`. Padrão: `cloud` com `JIRA_EMAIL`, senão `server` |
 
 As variáveis têm prioridade sobre o arquivo. Isso é útil em CI ou para testar com outra
 conta.

@@ -1,14 +1,14 @@
 import { issueKeyRegex } from '../core/commit-message.js';
 import { currentBranch } from '../infra/git.js';
-import { issueUrl } from '../infra/storage/credentials.js';
-import { loadProjectConfig } from '../infra/storage/project-config.js';
+import { issueUrl } from '../infra/jira/client.js';
+import { openProject } from '../services/project.js';
 import { BACK, runSteps } from '../utils/steps.js';
 import { c, header, icon, log } from '../ui/index.js';
 import { askComment, sendComment } from '../flows/comment.js';
 import { pickIssue } from '../flows/pick-issue.js';
 
 export async function comment(args = []) {
-  const cfg = loadProjectConfig();
+  const cfg = openProject();
   const keyRegex = issueKeyRegex(cfg.projectKey);
   const { key, text } = parseArgs(cfg, args);
   const branch = currentBranch();

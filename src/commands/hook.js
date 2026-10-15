@@ -3,10 +3,10 @@ import { commitBody, detailLines, formatMessage, issueKeyRegex, splitConventiona
 import { aiEnabled, suggestSubject } from '../infra/ai.js';
 import { currentBranch, recentSubjects, stagedDiff, stagedFiles } from '../infra/git.js';
 import { readMessageFile, writeMessageFile } from '../infra/message-file.js';
-import { issueUrl } from '../infra/storage/credentials.js';
-import { loadProjectConfig } from '../infra/storage/project-config.js';
+import { issueUrl } from '../infra/jira/client.js';
 import { getRepoState, setRepoState } from '../infra/storage/repo-state.js';
 import { findMyIssues } from '../services/issues.js';
+import { openProject } from '../services/project.js';
 import { inBackground } from '../utils/promise.js';
 import { BACK, c, header, log, summaryCard } from '../ui/index.js';
 import { chooseIssue, linkBranchIssue } from '../flows/choose-issue.js';
@@ -19,7 +19,7 @@ export async function hook(msgFile, source) {
   if (!msgFile) throw new Error('Uso: jira-commit hook <arquivo-msg> [origem]');
   if (READY_SOURCES.includes(source) || process.env.JIRA_COMMIT_SKIP === '1') return;
 
-  const cfg = loadProjectConfig();
+  const cfg = openProject();
   const keyRegex = issueKeyRegex(cfg.projectKey);
   let { firstLine, rest } = readMessageFile(msgFile);
   if (keyRegex.test(firstLine)) return;

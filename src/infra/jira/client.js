@@ -1,4 +1,4 @@
-import { loadCredentials } from '../storage/credentials.js';
+import { loadSite } from '../storage/credentials.js';
 
 const TIMEOUT_MS = 10_000;
 
@@ -10,14 +10,36 @@ export class JiraError extends Error {
   }
 }
 
-export async function request(path, { method = 'GET', body } = {}) {
-  const { baseUrl, email, token } = loadCredentials();
-  const auth = Buffer.from(`${email}:${token}`).toString('base64');
+let selected = null;
 
-  const res = await fetch(`${baseUrl.replace(/\/$/, '')}${path}`, {
+// Aceita um site completo, além do endereço: o login testa a conexão antes de salvar
+export function useSite(site) {
+  selected = site ?? null;
+}
+
+export function currentSite() {
+  return typeof selected === 'object' && selected !== null ? selected : loadSite(selected);
+}
+
+export function issueUrl(key) {
+  try {
+    return `${currentSite().url}/browse/${key}`;
+  } catch {
+    return null;
+  }
+}
+
+function authorization({ type, email, token }) {
+  if (type === 'server') return `Bearer ${token}`;
+  return `Basic ${Buffer.from(`${email}:${token}`).toString('base64')}`;
+}
+
+export async function request(path, { method = 'GET', body } = {}) {
+  const site = currentSite();
+  const res = await fetch(`${site.url}${path}`, {
     method,
     headers: {
-      Authorization: `Basic ${auth}`,
+      Authorization: authorization(site),
       Accept: 'application/json',
       'Content-Type': 'application/json',
     },

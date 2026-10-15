@@ -108,6 +108,10 @@ npx --no-install jira-commit login
 
 No fim ele testa a conexão e mostra `✔ Conectado como <seu nome>`.
 
+**Mais de um Jira** (ex.: um para cada cliente): rode o `login` de novo para cada um. O token
+só é salvo depois que a conexão funciona. O primeiro Jira vira o padrão, e cada repositório
+aponta para o seu pelo campo `jiraUrl` do `.jira-commit.json`, que o `init` preenche.
+
 As credenciais ficam em `~/.config/jira-commit/credentials.json`. Também dá para usar as
 variáveis `JIRA_BASE_URL`, `JIRA_EMAIL` e `JIRA_API_TOKEN`, que têm prioridade sobre o
 arquivo.

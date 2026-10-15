@@ -4,6 +4,7 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { hasDependency, withHusky } from '../src/infra/package-json.js';
+import { migrateCredentials } from '../src/infra/storage/credentials.js';
 import { addDevCommand, binCommand, detectPackageManager } from '../src/infra/package-manager.js';
 
 describe('package-json', () => {
@@ -43,5 +44,20 @@ describe('package-manager', () => {
     assert.deepEqual(addDevCommand('yarn', ['husky']), ['yarn', 'add', '--dev', 'husky']);
     assert.deepEqual(binCommand('pnpm', 'husky'), ['pnpm', 'exec', 'husky']);
     assert.deepEqual(binCommand('npm', 'husky'), ['npx', '--no-install', 'husky']);
+  });
+});
+
+describe('credentials', () => {
+  it('converte o formato antigo de um site só', () => {
+    assert.deepEqual(migrateCredentials({ baseUrl: 'https://a.atlassian.net/', email: 'e@x', token: 't' }), {
+      default: 'https://a.atlassian.net',
+      sites: { 'https://a.atlassian.net': { type: 'cloud', email: 'e@x', token: 't' } },
+    });
+  });
+
+  it('mantém o formato novo', () => {
+    const data = { default: 'https://a', sites: { 'https://a': { type: 'server', token: 't' } } };
+    assert.deepEqual(migrateCredentials(data), data);
+    assert.deepEqual(migrateCredentials({}), { default: null, sites: {} });
   });
 });

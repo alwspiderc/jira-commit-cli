@@ -1,10 +1,10 @@
 import { buildTree } from '../core/issue-tree.js';
-import { loadProjectConfig } from '../infra/storage/project-config.js';
 import { findMyIssues } from '../services/issues.js';
+import { openProject } from '../services/project.js';
 import { c, header, log, treeLines, withSpinner } from '../ui/index.js';
 
 export async function list(args = []) {
-  const cfg = loadProjectConfig();
+  const cfg = openProject();
   const { all, status } = parseArgs(args);
   header(`${cfg.projectKey} · suas atividades`, c.dim(filterLabel(cfg, { all, status })));
 

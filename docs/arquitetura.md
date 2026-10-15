@@ -49,7 +49,8 @@ jira-commit-cli/
 │  │  ├─ manual-key.js          Digitar a chave, validada no Jira
 │  │  └─ comment.js             Comentário na atividade: pergunta e publica (falha não aborta)
 │  ├─ services/
-│  │  └─ issues.js              JQL das suas atividades (status por ID), busca no projeto, épicos, tipo de subtarefa
+│  │  ├─ issues.js              JQL das suas atividades (status por ID), busca no projeto, épicos, tipo de subtarefa
+│  │  └─ project.js             openProject(): lê o .jira-commit.json e escolhe o Jira (jiraUrl) do repositório
 │  ├─ core/
 │  │  ├─ commit-message.js      splitConventional, commitBody, detailLines, formatMessage, keyReserve
 │  │  ├─ commit-options.js      Seção "commit" do .jira-commit.json e importação do cz
@@ -60,9 +61,9 @@ jira-commit-cli/
 │  │  ├─ validate.js            Valida um valor contra o schema/jira-commit.schema.json
 │  │  └─ adf.js                 Descrição em Atlassian Document Format
 │  ├─ infra/
-│  │  ├─ jira/client.js         Requisição autenticada, timeout e JiraError (com o status HTTP)
+│  │  ├─ jira/client.js         Site atual (useSite), requisição autenticada, timeout e JiraError (com o status HTTP)
 │  │  ├─ jira/api.js            Endpoints da API REST v3 e Agile
-│  │  ├─ storage/               credentials.js, repo-state.js, project-config.js
+│  │  ├─ storage/               credentials.js (vários Jiras), repo-state.js, project-config.js
 │  │  ├─ git.js                 Raiz do repo, branch, arquivos, diff do stage e descrições recentes
 │  │  ├─ git-hook.js            Lê e instala o prepare-commit-msg (Husky ou .git/hooks)
 │  │  ├─ commit-tooling.js      .cz-config.js e commitlint do projeto
