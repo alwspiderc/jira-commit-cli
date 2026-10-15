@@ -4,6 +4,7 @@ import { login } from '../src/commands/login.js';
 import { list } from '../src/commands/list.js';
 import { init } from '../src/commands/init.js';
 import { comment } from '../src/commands/comment.js';
+import { doctor } from '../src/commands/doctor.js';
 import { c, icon, log } from '../src/ui/index.js';
 import { VERSION } from '../src/version.js';
 
@@ -15,6 +16,7 @@ const commands = {
   list: () => list(args),
   init,
   comment: () => comment(args),
+  doctor,
 };
 
 const cmd = (name, desc) => `    ${c.accent(name.padEnd(27))} ${desc}`;
@@ -23,8 +25,9 @@ const help = `
   ${c.dim('Liga cada commit a uma atividade do Jira, ou cria uma na hora.')}
 
   ${c.bold('Primeiros passos')}
-${cmd('login', 'Salva URL, e-mail e API token nesta máquina')}
+${cmd('login', 'Salva o acesso a um Jira (Cloud ou Server) nesta máquina')}
 ${cmd('init', 'Configura o repositório e instala o hook')}
+${cmd('doctor', 'Confere login, config, hook e CLI e diz o que corrigir')}
 
   ${c.bold('No dia a dia')}
 ${cmd('list', 'Suas atividades nos status padrão')}

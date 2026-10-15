@@ -609,6 +609,27 @@ Para comentar junto com um commit, use a ação **❝ Comentar na atividade** do
 
 ## 12. Problemas comuns
 
+**Comece pelo `doctor`.** Ele confere tudo de uma vez e diz o que fazer em cada problema:
+
+```bash
+npx --no-install jira-commit doctor     # ou só jira-commit doctor, com a instalação global
+```
+
+```text
+✔ Node               v22.12.0
+✔ .jira-commit.json  projeto LOJA
+✔ Login no Jira      https://suaempresa.atlassian.net (Cloud)
+✖ Conexão            token inválido ou expirado
+                     → Rode: jira-commit login
+✔ Hook               .husky/prepare-commit-msg
+✖ Pasta dos hooks    o Husky não está ativo neste clone
+                     → Rode: npm install (o script "prepare" ativa o Husky)
+```
+
+Ele confere: versão do Node, o `.jira-commit.json`, o login e a conexão com o Jira, o projeto e
+o `issueType`, o hook (instalado, atualizado e na pasta certa), se o hook acha a CLI, o Husky e
+a IA. Sai com código 1 quando há algum ✖, então dá para usar em scripts.
+
 **`jira-commit não encontrado: commit sem o menu do Jira`**
 O hook não achou a CLI nem no projeto nem global. O commit foi feito, mas sem a chave.
 Instale a CLI ([seção 3](#3-instalação)) e, se o hook for de uma versão antiga, rode o `init`

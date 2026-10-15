@@ -38,7 +38,8 @@ jira-commit-cli/
 │  │  ├─ init.js                Cria .jira-commit.json, importa do cz, instala o hook e o npm run commit
 │  │  ├─ login.js               Salva e testa as credenciais
 │  │  ├─ list.js                Lista atividades (mesma árvore do menu)
-│  │  └─ comment.js             Comenta numa atividade fora do commit
+│  │  ├─ comment.js             Comenta numa atividade fora do commit
+│  │  └─ doctor.js              Mostra o diagnóstico (services/doctor.js) e sai com 1 se houver erro
 │  ├─ flows/
 │  │  ├─ choose-issue.js        Menu de atividades: lista, busca, ações (criar, outros status, pular…)
 │  │  ├─ pick-issue.js          Escolha simples de atividade (lista + busca), usada pelo comando comment
@@ -50,7 +51,8 @@ jira-commit-cli/
 │  │  └─ comment.js             Comentário na atividade: pergunta e publica (falha não aborta)
 │  ├─ services/
 │  │  ├─ issues.js              JQL das suas atividades (status por ID), busca no projeto, épicos, tipo de subtarefa
-│  │  └─ project.js             openProject(): lê o .jira-commit.json e escolhe o Jira (jiraUrl) do repositório
+│  │  ├─ project.js             openProject(): lê o .jira-commit.json e escolhe o Jira (jiraUrl) do repositório
+│  │  └─ doctor.js              Verificações do doctor; uma que falha pula as que dependem dela
 │  ├─ core/
 │  │  ├─ commit-message.js      splitConventional, commitBody, detailLines, formatMessage, keyReserve
 │  │  ├─ commit-options.js      Seção "commit" do .jira-commit.json e importação do cz
