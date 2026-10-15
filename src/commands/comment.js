@@ -1,4 +1,5 @@
 import { issueKeyRegex, parseIssueKey } from '../core/commit-message.js';
+import { t } from '../i18n/index.js';
 import { currentBranch } from '../infra/git.js';
 import { issueUrl } from '../infra/jira/client.js';
 import { openProject } from '../services/project.js';
@@ -12,27 +13,27 @@ export async function comment(args = []) {
   const keyRegex = issueKeyRegex(cfg.projectKey);
   const { key, text } = parseArgs(cfg, args);
   const branch = currentBranch();
-  header(`${cfg.projectKey} · comentário`, c.dim('esc volta ao passo anterior'));
+  header(`${cfg.projectKey} · ${t.comment.title}`, c.dim(t.common.escBack));
 
   const answers = await runSteps(
     [
       {
         key: 'key',
         when: () => !key,
-        run: () => pickIssue(cfg, { message: 'Comentar em qual atividade?', branch, keyRegex }),
+        run: () => pickIssue(cfg, { message: t.comment.which, branch, keyRegex }),
       },
       { key: 'text', when: () => !text, run: () => askComment() },
     ],
     { key, text },
   );
   if (answers === BACK) {
-    log.hint('Cancelado.');
+    log.hint(t.cli.cancelled);
     console.log();
     return;
   }
 
   if (!(await sendComment(answers.key, answers.text))) {
-    log.hint('Comentário vazio, nada foi enviado.');
+    log.hint(t.comment.empty);
     console.log();
     return;
   }

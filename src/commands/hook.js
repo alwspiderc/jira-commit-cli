@@ -1,5 +1,6 @@
 import { commitOptions } from '../core/commit-options.js';
 import { commitBody, detailLines, formatMessage, issueKeyRegex, splitConventional } from '../core/commit-message.js';
+import { t } from '../i18n/index.js';
 import { aiEnabled, suggestSubject } from '../infra/ai.js';
 import { currentBranch, recentSubjects, stagedDiff, stagedFiles } from '../infra/git.js';
 import { readMessageFile, writeMessageFile } from '../infra/message-file.js';
@@ -16,7 +17,7 @@ import { postComment } from '../flows/comment.js';
 const READY_SOURCES = ['merge', 'squash', 'commit'];
 
 export async function hook(msgFile, source) {
-  if (!msgFile) throw new Error('Uso: jira-commit hook <arquivo-msg> [origem]');
+  if (!msgFile) throw new Error(t.errors.hookUsage);
   if (READY_SOURCES.includes(source) || process.env.JIRA_COMMIT_SKIP === '1') return;
 
   const cfg = openProject();
@@ -25,8 +26,8 @@ export async function hook(msgFile, source) {
   if (keyRegex.test(firstLine)) return;
 
   const branch = currentBranch();
-  const context = firstLine ? c.accent(firstLine) : c.dim('(mensagem vazia)');
-  header(`${cfg.projectKey} · ${branch}`, `${context}  ${c.dim('· esc volta ao passo anterior')}`);
+  const context = firstLine ? c.accent(firstLine) : c.dim(t.hook.emptyMessage);
+  header(`${cfg.projectKey} · ${branch}`, `${context}  ${c.dim(`· ${t.common.escBack}`)}`);
 
   const branchKey = cfg.autoLinkBranch ? branch.match(keyRegex)?.[0] : null;
   const prefetch = branchKey ? null : inBackground(findMyIssues(cfg));
@@ -64,8 +65,8 @@ export async function hook(msgFile, source) {
 
   if (!result) {
     save(firstLine);
-    log.hint('Commit seguirá sem chave do Jira.');
-    if (commit.comment) log.hint('O comentário não foi enviado: nenhuma atividade foi vinculada.');
+    log.hint(t.hook.noKey);
+    if (commit.comment) log.hint(t.hook.commentNotSent);
     console.log();
     return;
   }

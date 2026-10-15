@@ -1,3 +1,5 @@
+import { t } from '../i18n/index.js';
+
 const DEFAULT_MODEL = 'claude-opus-5-5';
 const TIMEOUT_MS = 8_000;
 
@@ -8,37 +10,26 @@ export function aiEnabled(cfg) {
 export async function suggestTitle(cfg, { diff, files, subject, parentSummary }) {
   if (!aiEnabled(cfg) || (!diff && !files.length)) return null;
 
-  return ask(
-    cfg,
-    'Você escreve títulos de subtarefas do Jira para um time de desenvolvimento brasileiro. ' +
-      'Responda só com o título: uma frase em português, no infinitivo ("Criar…", "Corrigir…", "Adicionar…"), ' +
-      'até 90 caracteres, sem prefixo de produto, sem chave de issue, sem aspas e sem ponto final. ' +
-      'Descreva o que a mudança entrega, não os arquivos.',
-    [
-      parentSummary && `Tarefa pai: ${parentSummary}`,
-      subject && `Mensagem do commit: ${subject}`,
-      files.length && `Arquivos alterados:\n${files.join('\n')}`,
-      diff && `Diff:\n${diff}`,
-    ],
-  );
+  return ask(cfg, t.ai.titleSystem, [
+    parentSummary && `${t.ai.parentTask}: ${parentSummary}`,
+    subject && `${t.ai.commitMessage}: ${subject}`,
+    files.length && `${t.ai.changedFiles}:\n${files.join('\n')}`,
+    diff && `Diff:\n${diff}`,
+  ]);
 }
 
 export async function suggestSubject(cfg, { diff, files, examples }) {
   if (!aiEnabled(cfg) || (!diff && !files.length)) return null;
 
-  return ask(
-    cfg,
-    'Você escreve a descrição da primeira linha de mensagens de commit (Conventional Commits) ' +
-      'para um time de desenvolvimento brasileiro. Responda só com a descrição: uma frase curta em ' +
-      'português, no mesmo estilo dos exemplos (sem exemplos: "adiciona card de benefício na home"), ' +
-      'começando com letra minúscula, até 72 caracteres, sem tipo, sem escopo, sem chave de issue, ' +
-      'sem aspas e sem ponto final. Descreva o que a mudança faz, não os arquivos.',
-    [
-      examples.length && `Descrições recentes deste repositório:\n${examples.join('\n')}`,
-      files.length && `Arquivos alterados:\n${files.join('\n')}`,
-      diff && `Diff:\n${diff}`,
-    ],
-  );
+  return ask(cfg, t.ai.subjectSystem, [
+    examples.length && `${t.ai.recentSubjects}:\n${examples.join('\n')}`,
+    files.length && `${t.ai.changedFiles}:\n${files.join('\n')}`,
+    diff && `Diff:\n${diff}`,
+  ]);
+}
+
+export function systemPrompt(base, instructions) {
+  return instructions?.trim() ? `${base}\n\n${t.ai.projectInstructions}: ${instructions.trim()}` : base;
 }
 
 async function ask(cfg, system, context) {
@@ -52,7 +43,7 @@ async function ask(cfg, system, context) {
       output_config: { effort: 'low' },
       betas: ['server-side-fallback-2026-07-01'],
       fallbacks: 'default',
-      system,
+      system: systemPrompt(system, cfg.aiInstructions),
       messages: [{ role: 'user', content: context.filter(Boolean).join('\n\n') }],
     });
 

@@ -1,3 +1,4 @@
+import { t } from '../i18n/index.js';
 import { getMyself } from '../infra/jira/api.js';
 import { deploymentType, useSite } from '../infra/jira/client.js';
 import { listSites, normalizeUrl, saveSite } from '../infra/storage/credentials.js';
@@ -6,68 +7,68 @@ import { c, confirm, header, input, log, password, select, withSpinner } from '.
 const TOKEN_PAGE = 'https://id.atlassian.com/manage-profile/security/api-tokens';
 
 export async function login() {
-  header('login', c.dim('As credenciais ficam só nesta máquina, em ~/.config/jira-commit'));
+  header('login', c.dim(t.login.storedLocally));
   const saved = listSites();
   if (saved.length) showSites(saved);
 
   const url = normalizeUrl(
     await input({
-      message: `URL do Jira ${c.dim('· ex.: https://suaempresa.atlassian.net')}`,
-      validate: (v) => /^https?:\/\/.+/.test(v.trim()) || 'Use a URL completa, com https://',
+      message: `${t.login.url} ${c.dim(`· ${t.login.urlExample}`)}`,
+      validate: (v) => /^https?:\/\/.+/.test(v.trim()) || t.login.urlInvalid,
     }),
   );
   const type = await detectType(url);
   const site = type === 'cloud' ? await askCloud(url) : await askServer(url);
 
   useSite(site);
-  const me = await withSpinner('Testando a conexão…', () => getMyself());
+  const me = await withSpinner(t.login.testing, () => getMyself());
 
   const others = saved.filter((s) => s.url !== url);
   const makeDefault =
     others.length > 0 &&
     !saved.find((s) => s.url === url)?.isDefault &&
-    (await confirm({ message: `Usar ${c.accent(url)} como Jira padrão?`, default: false }));
+    (await confirm({ message: t.login.makeDefault(c.accent(url)), default: false }));
   saveSite({ ...site, makeDefault });
 
   console.log();
-  log.ok(`Conectado como ${c.bold(me.displayName)} em ${c.accent(url)}`);
-  if (others.length) log.hint(`Num repositório de outro Jira, defina "jiraUrl" no .jira-commit.json (o init faz isso).`);
-  log.hint('Próximo passo, em cada repositório: jira-commit init');
+  log.ok(t.login.connected(c.bold(me.displayName), c.accent(url)));
+  if (others.length) log.hint(t.login.otherJiraHint);
+  log.hint(t.login.next);
   console.log();
 }
 
 async function detectType(url) {
   try {
-    return await withSpinner('Identificando o Jira…', () => deploymentType(url), {
+    return await withSpinner(t.login.detecting, () => deploymentType(url), {
       done: (type) => (type === 'cloud' ? 'Jira Cloud' : 'Jira Server / Data Center'),
     });
   } catch {
     if (/\.atlassian\.net$/.test(new URL(url).hostname)) return 'cloud';
     return select({
-      message: 'Que Jira é esse?',
+      message: t.login.whichJira,
       choices: [
-        { name: 'Jira Cloud', value: 'cloud', description: 'Endereço *.atlassian.net, login com e-mail e API token' },
-        { name: 'Jira Server / Data Center', value: 'server', description: 'Instalado na empresa, login com token pessoal' },
+        { name: 'Jira Cloud', value: 'cloud', description: t.login.cloudHelp },
+        { name: 'Jira Server / Data Center', value: 'server', description: t.login.serverHelp },
       ],
     });
   }
 }
 
 async function askCloud(url) {
-  const email = await input({ message: 'E-mail da conta Atlassian' });
-  log.hint(`Gere o token em ${TOKEN_PAGE}`);
-  const token = await password({ message: 'API token', mask: '•' });
+  const email = await input({ message: t.login.email });
+  log.hint(t.login.tokenPage(TOKEN_PAGE));
+  const token = await password({ message: t.login.apiToken, mask: '•' });
   return { url, type: 'cloud', email, token };
 }
 
 async function askServer(url) {
-  log.hint('Crie um token pessoal no Jira: seu perfil → Tokens de acesso pessoal');
-  const token = await password({ message: 'Token pessoal (PAT)', mask: '•' });
+  log.hint(t.login.patHint);
+  const token = await password({ message: t.login.pat, mask: '•' });
   return { url, type: 'server', token };
 }
 
 function showSites(sites) {
-  log.hint('Jiras já salvos (faça login de novo num deles para trocar o token):');
-  for (const s of sites) log.hint(`  ${s.url}${s.isDefault ? c.dim('  · padrão') : ''}`);
+  log.hint(t.login.saved);
+  for (const s of sites) log.hint(`  ${s.url}${s.isDefault ? c.dim(`  ${t.login.isDefault}`) : ''}`);
   console.log();
 }

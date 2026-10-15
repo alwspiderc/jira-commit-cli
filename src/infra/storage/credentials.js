@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { CONFIG_DIR } from './paths.js';
+import { t } from '../../i18n/index.js';
 
 const CREDENTIALS_FILE = join(CONFIG_DIR, 'credentials.json');
 const OWNER_ONLY = 0o600;
@@ -57,9 +58,7 @@ export function loadSite(url) {
   const key = url ? normalizeUrl(url) : data.default;
   const site = key && data.sites[key];
   if (!site) {
-    throw new Error(
-      url ? `Sem login para ${key}. Rode: jira-commit login` : 'Credenciais do Jira não encontradas. Rode: jira-commit login',
-    );
+    throw new Error(url ? t.errors.noLoginFor(key) : t.errors.noCredentials);
   }
   return { url: key, ...site };
 }

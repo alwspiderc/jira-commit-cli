@@ -1,6 +1,7 @@
 import { bodyParagraphs } from '../core/document.js';
 import { detailLines } from '../core/commit-message.js';
 import { capitalizeTitle, mostCommonProduct, productOf, resolvePrefix } from '../core/issue-title.js';
+import { t } from '../i18n/index.js';
 import { aiEnabled, suggestTitle } from '../infra/ai.js';
 import { stagedDiff, stagedFiles } from '../infra/git.js';
 import { activeSprint, createIssue, getIssue, storyPointsField } from '../infra/jira/api.js';
@@ -30,7 +31,7 @@ export async function createFromCommit(cfg, commit, issues, keyRegex) {
       key: 'epic',
       when: async (s) => {
         if (s.kind !== KIND.TASK) return false;
-        epicsData = await withSpinner('Buscando os épicos…', () => epicsLookup);
+        epicsData = await withSpinner(t.create.loadingEpics, () => epicsLookup);
         return Boolean(epicsData?.epics.length);
       },
       run: () => chooseEpic(epicsData),
@@ -67,7 +68,7 @@ export async function createFromCommit(cfg, commit, issues, keyRegex) {
   const sprint = await lookups.sprint;
 
   const key = await withSpinner(
-    'Criando no Jira…',
+    t.create.creating,
     () =>
       createIssue({
         projectKey: cfg.projectKey,
@@ -81,7 +82,7 @@ export async function createFromCommit(cfg, commit, issues, keyRegex) {
         components: parent?.components,
         storyPoints,
       }),
-    { done: (k) => `${c.key(k)} criada no Jira` },
+    { done: (k) => t.create.created(c.key(k)) },
   );
   if (parent) setRepoState({ lastParent: parent.key });
   if (!parent && epicsData?.epics.length) setRepoState({ lastEpic: epic?.key ?? null }); // "sem épico" também é lembrado
@@ -116,7 +117,7 @@ function cached(fn) {
 async function loadParent(cfg, issues, keyRegex) {
   const chosen = await chooseParent(cfg, issues, keyRegex);
   if (chosen === BACK) return BACK;
-  return withSpinner(`Carregando ${chosen.key}…`, () => getIssue(chosen.key));
+  return withSpinner(t.create.loading(chosen.key), () => getIssue(chosen.key));
 }
 
 function startLookups(cfg, parent) {
@@ -134,9 +135,9 @@ function startLookups(cfg, parent) {
 function suggestTitleFor(cfg, { commit, parent, files }) {
   if (!aiEnabled(cfg)) return Promise.resolve(null);
   return withSpinner(
-    'Pedindo uma sugestão de título à IA…',
+    t.create.askingAi,
     () => suggestTitle(cfg, { diff: stagedDiff(), files, subject: commit.subject, parentSummary: parent?.summary }),
-    { done: (s) => c.dim(s ? 'Sugestão da IA pronta' : 'Sem sugestão da IA, usando o commit') },
+    { done: (s) => c.dim(s ? t.create.aiReady : t.create.aiNone) },
   );
 }
 
@@ -146,10 +147,10 @@ async function askTitle(cfg, { commit, issues, parent, suggestion }) {
     : mostCommonProduct(issues, cfg.productSeparator);
   const prefix = resolvePrefix(cfg.summaryPrefix, product);
   const title = await field({
-    message: suggestion ? `Título ${c.dim('· sugerido pela IA')}` : 'Título',
+    message: suggestion ? `${t.create.title} ${c.dim(`· ${t.create.suggestedByAi}`)}` : t.create.title,
     default: capitalizeTitle(prefix + (suggestion ?? commit.subject), prefix),
     prefill: 'editable',
-    validate: (v) => v.trim().length > 0 || 'O título não pode ficar vazio',
+    validate: (v) => v.trim().length > 0 || t.create.titleEmpty,
     back: true,
   });
   if (title === BACK) return BACK;
@@ -158,11 +159,11 @@ async function askTitle(cfg, { commit, issues, parent, suggestion }) {
 
 function confirmCreation(cfg, { parent, issueType, epic, sprint }) {
   const where = parent
-    ? `subtarefa de ${c.key(parent.key)}`
-    : `${issueType} em ${c.key(cfg.projectKey)}` +
-      (epic ? ` no épico ${c.key(epic.key)}` : '') +
-      (sprint ? ` na ${c.accent(sprint.name)}` : '');
-  return confirm({ message: `Criar ${where}?`, default: true, back: true });
+    ? t.create.subtaskOf(c.key(parent.key))
+    : t.create.inProject(issueType, c.key(cfg.projectKey)) +
+      (epic ? t.create.inEpic(c.key(epic.key)) : '') +
+      (sprint ? t.create.inSprint(c.accent(sprint.name)) : '');
+  return confirm({ message: t.create.confirm(where), default: true, back: true });
 }
 
 function fullBody(commit) {

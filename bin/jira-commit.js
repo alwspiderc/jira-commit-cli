@@ -5,6 +5,7 @@ import { list } from '../src/commands/list.js';
 import { init } from '../src/commands/init.js';
 import { comment } from '../src/commands/comment.js';
 import { doctor } from '../src/commands/doctor.js';
+import { t } from '../src/i18n/index.js';
 import { c, icon, log } from '../src/ui/index.js';
 import { VERSION } from '../src/version.js';
 
@@ -20,29 +21,29 @@ const commands = {
 };
 
 const cmd = (name, desc) => `    ${c.accent(name.padEnd(27))} ${desc}`;
-const help = `
+const help = () => `
   ${icon.brand} ${c.brand('jira-commit')} ${c.dim(`v${VERSION}`)}
-  ${c.dim('Liga cada commit a uma atividade do Jira, ou cria uma na hora.')}
+  ${c.dim(t.cli.tagline)}
 
-  ${c.bold('Primeiros passos')}
-${cmd('login', 'Salva o acesso a um Jira (Cloud ou Server) nesta máquina')}
-${cmd('init', 'Configura o repositório e instala o hook')}
-${cmd('doctor', 'Confere login, config, hook e CLI e diz o que corrigir')}
+  ${c.bold(t.cli.firstSteps)}
+${cmd('login', t.cli.login)}
+${cmd('init', t.cli.init)}
+${cmd('doctor', t.cli.doctor)}
 
-  ${c.bold('No dia a dia')}
-${cmd('list', 'Suas atividades nos status padrão')}
-${cmd('list --todos', 'Todas as suas atividades abertas')}
-${cmd('list --status "NOME"', 'Só as atividades nesse status')}
-${cmd('comment [CHAVE] ["texto"]', 'Comenta numa atividade do Jira')}
+  ${c.bold(t.cli.daily)}
+${cmd('list', t.cli.list)}
+${cmd(t.cli.listAllArg, t.cli.listAll)}
+${cmd(t.cli.listStatusArg, t.cli.listStatus)}
+${cmd(t.cli.commentArgs, t.cli.comment)}
 
-  ${c.dim('O menu aparece sozinho no git commit (pelo terminal).')}
+  ${c.dim(t.cli.footer)}
 `;
 
 const run = commands[command];
 if (!run) {
-  console.log(help);
+  console.log(help());
   if (command && !['help', '--help', '-h'].includes(command)) {
-    log.err(`Comando desconhecido: ${command}`);
+    log.err(t.cli.unknown(command));
     console.log();
     process.exit(1);
   }
@@ -55,14 +56,14 @@ try {
   const cancelled = err?.name === 'ExitPromptError';
   if (cancelled) {
     console.log();
-    log.hint(command === 'hook' ? 'Cancelado. O commit não foi feito.' : 'Cancelado.');
+    log.hint(command === 'hook' ? t.cli.cancelledHook : t.cli.cancelled);
     console.log();
     process.exit(1);
   }
   console.log();
   log.err(err.message);
-  if (err.status === 401) log.hint('Token inválido ou expirado? Rode: jira-commit login');
-  if (command === 'hook') log.hint('O commit foi cancelado. Corrija e tente de novo.');
+  if (err.status === 401) log.hint(t.cli.tokenHint);
+  if (command === 'hook') log.hint(t.cli.hookAborted);
   console.log();
   process.exit(1);
 }

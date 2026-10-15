@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { DEFAULT_PRODUCT_SEPARATOR } from '../../core/issue-title.js';
 import { validate } from '../../core/validate.js';
 import { repoRoot } from '../git.js';
+import { t } from '../../i18n/index.js';
 
 export const PROJECT_FILE = '.jira-commit.json';
 export const SCHEMA_REF = './node_modules/jira-commit-cli/schema/jira-commit.schema.json';
@@ -29,7 +30,7 @@ export function readProjectFile() {
   try {
     return JSON.parse(text);
   } catch (err) {
-    throw new Error(`${PROJECT_FILE} não é um JSON válido (${err.message})`);
+    throw new Error(t.errors.configNotJson(PROJECT_FILE, err.message));
   }
 }
 
@@ -39,13 +40,13 @@ export function checkProjectConfig(raw) {
 
 export function loadProjectConfig() {
   if (!projectConfigExists()) {
-    throw new Error(`Arquivo ${PROJECT_FILE} não encontrado. Rode: jira-commit init`);
+    throw new Error(t.errors.configMissing(PROJECT_FILE));
   }
   const raw = readProjectFile();
   const { errors } = checkProjectConfig(raw);
   if (errors.length) {
     const list = errors.map((e) => `  · ${e}`).join('\n');
-    throw new Error(`${PROJECT_FILE} tem ${errors.length} problema(s):\n${list}`);
+    throw new Error(`${t.errors.configProblems(PROJECT_FILE, errors.length)}\n${list}`);
   }
   return { ...DEFAULTS, ...raw };
 }

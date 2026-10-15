@@ -10,13 +10,13 @@
     "projectKey": {
       "type": "string",
       "pattern": "^[A-Z][A-Z0-9]+$",
-      "x-hint": "ex.: APP",
+      "x-hint": "APP",
       "description": "Chave do projeto no Jira"
     },
     "jiraUrl": {
       "type": "string",
       "pattern": "^https?://",
-      "x-hint": "ex.: https://suaempresa.atlassian.net",
+      "x-hint": "https://suaempresa.atlassian.net",
       "description": "Jira deste repositório, quando você tem mais de um salvo no login"
     },
     "language": {

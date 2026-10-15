@@ -1,9 +1,10 @@
-// Usa a CLI do projeto e, se não houver, a global. Sem nenhuma, avisa e deixa o commit seguir.
+// Usa a CLI do projeto e, se não houver, a global. Sem nenhuma, avisa e deixa o commit seguir
+// (nos dois idiomas: o bloco não pode depender do idioma de quem rodou o init).
 // Clientes gráficos (ex.: VS Code) não têm /dev/tty: sem essa checagem, o commit travaria
 export const HOOK_BLOCK = [
   '# jira-commit',
   'JC=./node_modules/.bin/jira-commit; [ -f "$JC" ] || JC=$(command -v jira-commit)',
-  'if [ -z "$JC" ]; then echo "jira-commit não encontrado: commit sem o menu do Jira" >&2',
+  'if [ -z "$JC" ]; then echo "jira-commit: CLI não encontrada / not found" >&2',
   'elif sh -c ": >/dev/tty" 2>/dev/null; then "$JC" hook "$1" "$2" < /dev/tty; fi',
 ];
 

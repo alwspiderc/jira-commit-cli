@@ -1,4 +1,5 @@
 import { styleText } from 'node:util';
+import { t } from '../i18n/index.js';
 
 export const c = {
   brand: (t) => styleText(['bold', 'magenta'], t),
@@ -21,8 +22,6 @@ export const icon = {
   link: c.dim('↗'),
 };
 
-const KEY_LABELS = { navigate: 'navegar', select: 'escolher' };
-
 export const promptTheme = {
   prefix: { idle: icon.brand, done: icon.done },
   icon: { cursor: c.brand('❯') },
@@ -32,6 +31,6 @@ export const promptTheme = {
     searchTerm: (text) => c.accent(text),
     highlight: (text) => text,
     description: (text) => c.dim(`  ${text}`),
-    keysHelpTip: (keys) => c.dim(keys.map(([k, action]) => `${k} ${KEY_LABELS[action] ?? action}`).join('  ·  ')),
+    keysHelpTip: (keys) => c.dim(keys.map(([k, action]) => `${k} ${t.common[action] ?? action}`).join('  ·  ')),
   },
 };

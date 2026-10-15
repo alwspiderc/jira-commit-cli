@@ -193,6 +193,15 @@ Depois, **commite o `package.json`, o lock e a pasta `.husky`**. Assim, um coleg
 commita sem abrir o editor do git no fim. Se já existir um script `commit` (ex.: `git-cz`),
 pergunta antes de trocar.
 
+### Idioma
+
+A CLI fala **português** e **inglês**: menus, mensagens, erros, o `--help` e as sugestões da
+IA. O idioma vem, nesta ordem:
+
+1. do campo `"language"` do `.jira-commit.json` (`"pt"` ou `"en"`), que vale para o time;
+2. da variável `JIRA_COMMIT_LANG` (`pt` ou `en`), que vale para você;
+3. do idioma do sistema: português se ele for `pt-*`; inglês nos outros casos.
+
 ## 6. Questionário do commit (tipo, escopo e descrição)
 
 Com a seção `commit` no `.jira-commit.json`, um commit sem mensagem (`npm run commit` ou
@@ -532,8 +541,8 @@ seguir o estilo do time. A descrição chega preenchida e **editável**.
 
 1. lê o diff do que está no stage (até ~8 mil caracteres), a lista de arquivos, o texto
    do commit e o título da tarefa pai;
-2. pede um título curto, no infinitivo, em português (ex.: "Criar card de benefício na
-   Home");
+2. pede um título curto no idioma da CLI: no infinitivo em português (ex.: "Criar card de
+   benefício na Home") ou no imperativo em inglês (ex.: "Add benefit card to home");
 3. coloca a sugestão no campo de título, **editável**.
 
 Sem a chave, ou se a IA falhar ou demorar mais de 8 segundos, o título vem com o texto do
@@ -553,6 +562,8 @@ export ANTHROPIC_API_KEY="sk-ant-..."
 |---|---|
 | `"ai": false` | Desliga a IA naquele repositório, mesmo com a chave definida |
 | `"aiModel": "claude-haiku-5-5"` | Troca o modelo. O padrão é `claude-opus-5-5` com esforço baixo. O Haiku responde mais rápido e custa menos |
+| `"aiInstructions": "…"` | Orientação extra do projeto, somada às instruções da CLI. Ex.: `"Use os termos do domínio bancário e cite a tela afetada"` |
+| `"language": "en"` | As sugestões (e a CLI) passam a ser em inglês. Veja [Idioma](#idioma) |
 
 > **Privacidade:** com a IA ligada, o diff do commit é enviado para a API da Anthropic.
 > Siga a política da empresa sobre envio de código para serviços externos.

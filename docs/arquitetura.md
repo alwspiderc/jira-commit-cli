@@ -86,6 +86,7 @@ jira-commit-cli/
 │  │  ├─ output.js              log, cabeçalho e cartão
 │  │  ├─ spinner.js             Spinner com ✔/✖ no fim
 │  │  └─ summary-card.js        Cartão final do hook
+│  ├─ i18n/                     index.js (t, setLanguage, detectLanguage), pt.js e en.js: todos os textos
 │  ├─ utils/                    text.js (normalize, truncate), promise.js (inBackground), steps.js (runSteps, BACK)
 │  └─ version.js
 ├─ schema/jira-commit.schema.json  Regras do .jira-commit.json: validação e autocomplete no editor
@@ -262,6 +263,16 @@ Os flows não montam mais ADF. Eles mandam `{ paragraphs, files }` (`core/docume
 dialeto formata. O tipo é descoberto no `login` pelo `GET /rest/api/2/serverInfo`, que é
 público nos dois. Os testes de `test/jira.test.js` trocam o `fetch` e conferem URL,
 autenticação e corpo das chamadas nos dois dialetos. Não há um Jira Server de teste.
+
+**Textos em catálogos (`src/i18n`).** Nenhum texto para o usuário fica no código: tudo está
+em `pt.js` e `en.js`, com as mesmas chaves. Textos com variáveis são funções
+(`t.menu.linkingBranch(key)`). O `t` é um `Proxy` que lê o catálogo do idioma atual **na hora
+do acesso**. Por isso nada guarda texto em constante de módulo: o idioma só é conhecido depois
+de ler o `.jira-commit.json`, que acontece depois dos imports. O `test/i18n.test.js` confere que
+os dois catálogos têm as mesmas chaves e as mesmas variáveis. O idioma do sistema vem do `Intl`,
+e não do `LANG`, porque o Git Bash costuma definir `LANG=en_US` mesmo num Windows em português.
+O bloco do hook tem a única frase fixa nos dois idiomas, para não mudar conforme o idioma de
+quem rodou o `init`.
 
 **Um schema para validar e para o editor.** O `.jira-commit.json` é descrito num JSON Schema,
 que o editor usa para o autocomplete. O `core/validate.js` lê esse mesmo arquivo e implementa só

@@ -1,5 +1,6 @@
 import { keyReserve, splitConventional } from '../core/commit-message.js';
 import { rankChoices } from '../core/issue-match.js';
+import { t } from '../i18n/index.js';
 import { BACK, runSteps } from '../utils/steps.js';
 import { c, field, notice, search, withSpinner } from '../ui/index.js';
 
@@ -16,7 +17,7 @@ export async function askCommit(cfg, opts, suggestion, previous) {
     {
       key: 'subject',
       run: async (s) => {
-        suggested ??= suggestion ? await withSpinner('Pedindo uma sugestão de descrição à IA…', () => suggestion) : null;
+        suggested ??= suggestion ? await withSpinner(t.questions.askingAi, () => suggestion) : null;
         const prefix = prefixOf(s);
         const max = opts.headerMaxLength - prefix.length - keyReserve(cfg);
         return askSubject({ prefix, max, initial: s.subject ?? suggested, suggested: Boolean(suggested) });
@@ -36,7 +37,7 @@ function askType(types) {
     keywords: `${t.value} ${t.description ?? ''}`,
   }));
   return search({
-    message: `Tipo ${c.dim('· digite para filtrar')}`,
+    message: `${t.questions.type} ${c.dim(`· ${t.common.typeToFilter}`)}`,
     pageSize: PAGE_SIZE,
     source: (term) => filterChoices(choices, term),
     back: true,
@@ -44,10 +45,15 @@ function askType(types) {
 }
 
 async function askScope(scopes) {
-  const none = { name: c.dim('— sem escopo'), short: 'sem escopo', value: NO_SCOPE, keywords: 'sem escopo' };
+  const none = {
+    name: c.dim(t.questions.noScope),
+    short: t.questions.noScopeShort,
+    value: NO_SCOPE,
+    keywords: t.questions.noScopeShort,
+  };
   const choices = [...scopes.map((s) => ({ name: s, value: s, keywords: s })), none];
   const choice = await search({
-    message: `Escopo ${c.dim('· digite para filtrar')}`,
+    message: `${t.questions.scope} ${c.dim(`· ${t.common.typeToFilter}`)}`,
     pageSize: PAGE_SIZE,
     source: (term) => filterChoices(choices, term),
     back: true,
@@ -57,13 +63,13 @@ async function askScope(scopes) {
 
 async function askSubject({ prefix, max, initial, suggested }) {
   const subject = await field({
-    message: `Descrição ${c.dim(suggested ? '· sugerida pela IA' : `· ${c.accent(prefix.trim())} …`)}`,
+    message: `${t.questions.subject} ${c.dim(suggested ? `· ${t.questions.suggestedByAi}` : `· ${c.accent(prefix.trim())} …`)}`,
     default: initial?.slice(0, max) ?? undefined,
     prefill: 'editable',
     validate: (v) => {
       const len = v.trim().length;
-      if (!len) return 'A descrição não pode ficar vazia';
-      if (len > max) return `Muito longa: ${len} de no máximo ${max} caracteres`;
+      if (!len) return t.questions.subjectEmpty;
+      if (len > max) return t.questions.subjectTooLong(len, max);
       return true;
     },
     back: true,
@@ -74,12 +80,12 @@ async function askSubject({ prefix, max, initial, suggested }) {
 export async function askMessage(cfg, previous) {
   const conventional = cfg.format.includes('{prefix}');
   const message = await field({
-    message: `Mensagem do commit ${c.dim(conventional ? '· ex.: feat(home): adiciona card' : '· ex.: adiciona card')}`,
+    message: `${t.questions.message} ${c.dim(`· ${conventional ? t.questions.messageExampleConventional : t.questions.messageExample}`)}`,
     default: previous,
     prefill: 'editable',
     validate: (v) => {
-      if (!v.trim()) return 'A mensagem não pode ficar vazia';
-      if (conventional && !splitConventional(v.trim()).prefix) return 'Use o formato tipo(escopo): descrição';
+      if (!v.trim()) return t.questions.messageEmpty;
+      if (conventional && !splitConventional(v.trim()).prefix) return t.questions.messageFormat;
       return true;
     },
     back: true,
@@ -92,11 +98,11 @@ export async function askDetails(details) {
     [
       {
         key: 'body',
-        run: (s) => editableField(`Corpo ${c.dim('· use | para quebrar linha, vazio para nenhum')}`, s.body),
+        run: (s) => editableField(`${t.questions.body} ${c.dim(`· ${t.questions.bodyHint}`)}`, s.body),
       },
       {
         key: 'breaking',
-        run: (s) => editableField(`BREAKING CHANGE ${c.dim('· o que deixa de ser compatível, vazio para nenhum')}`, s.breaking),
+        run: (s) => editableField(`${t.questions.breaking} ${c.dim(`· ${t.questions.breakingHint}`)}`, s.breaking),
       },
     ],
     { ...details },
@@ -111,5 +117,5 @@ export async function editableField(message, current) {
 
 function filterChoices(choices, term) {
   const found = rankChoices(choices, term);
-  return found.length ? found : [notice(' Nada encontrado')];
+  return found.length ? found : [notice(` ${t.common.nothingFound}`)];
 }

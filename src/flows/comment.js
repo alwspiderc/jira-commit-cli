@@ -1,10 +1,11 @@
 import { commentParagraphs } from '../core/document.js';
+import { t } from '../i18n/index.js';
 import { addComment } from '../infra/jira/api.js';
 import { BACK, c, field, log, withSpinner } from '../ui/index.js';
 
 export async function askComment(current = '') {
   const text = await field({
-    message: `Comentário na atividade ${c.dim('· use | para quebrar linha, vazio para nenhum')}`,
+    message: `${t.comment.message} ${c.dim(`· ${t.comment.hint}`)}`,
     default: current || undefined,
     prefill: 'editable',
     back: true,
@@ -15,8 +16,8 @@ export async function askComment(current = '') {
 export async function sendComment(key, text) {
   const paragraphs = commentParagraphs(text);
   if (!paragraphs.length) return false;
-  await withSpinner('Comentando no Jira…', () => addComment(key, paragraphs), {
-    done: `Comentário adicionado em ${c.key(key)}`,
+  await withSpinner(t.comment.sending, () => addComment(key, paragraphs), {
+    done: t.comment.sent(c.key(key)),
   });
   return true;
 }
@@ -25,7 +26,7 @@ export async function postComment(key, text) {
   try {
     return await sendComment(key, text);
   } catch (err) {
-    log.warn(`Não consegui comentar em ${key} (${err.message}). O commit segue normalmente.`);
+    log.warn(t.comment.failed(key, err.message));
     return false;
   }
 }

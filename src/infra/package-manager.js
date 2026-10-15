@@ -1,6 +1,7 @@
 import { spawn } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
+import { t } from '../i18n/index.js';
 
 const LOCKFILES = [
   ['pnpm-lock.yaml', 'pnpm'],
@@ -27,7 +28,7 @@ export function run(root, command) {
     child.on('close', (code) => {
       if (code === 0) return resolve();
       const tail = output.trim().split('\n').slice(-3).join(' ').trim();
-      reject(new Error(tail || `${command[0]} saiu com código ${code}`));
+      reject(new Error(tail || t.errors.exitCode(command[0], code)));
     });
   });
 }

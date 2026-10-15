@@ -21,6 +21,9 @@ import { wikiText } from '../src/core/wiki.js';
 import { HOOK_BLOCK, hasCurrentBlock, hasCz, isLegacy, withHookBlock } from '../src/core/hook-script.js';
 import { validate } from '../src/core/validate.js';
 import { BACK, exit, runSteps } from '../src/utils/steps.js';
+import { setLanguage } from '../src/i18n/index.js';
+
+setLanguage('pt');
 
 describe('commit-message', () => {
   it('separa o prefixo Conventional Commits', () => {
@@ -171,7 +174,7 @@ describe('documento', () => {
   });
 
   it('monta o ADF com parágrafos e a lista de arquivos', () => {
-    const doc = adfDocument({ paragraphs: ['um', 'dois'], files: ['M a.js'] });
+    const doc = adfDocument({ paragraphs: ['um', 'dois'], files: ['M a.js'], filesTitle: 'Arquivos alterados' });
     assert.deepEqual(
       doc.content.map((n) => n.type),
       ['paragraph', 'paragraph', 'heading', 'bulletList'],
@@ -182,7 +185,7 @@ describe('documento', () => {
 
   it('monta o wiki markup do Jira Server', () => {
     assert.equal(
-      wikiText({ paragraphs: ['um', 'dois'], files: ['M a.js'] }),
+      wikiText({ paragraphs: ['um', 'dois'], files: ['M a.js'], filesTitle: 'Arquivos alterados' }),
       'um\n\ndois\n\nh4. Arquivos alterados\n\n* {{M a.js}}',
     );
     assert.equal(wikiText({}), undefined);

@@ -1,4 +1,5 @@
 import { execSync } from 'node:child_process';
+import { t } from '../i18n/index.js';
 
 function git(cmd) {
   return execSync(`git ${cmd}`, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
@@ -8,7 +9,7 @@ export function repoRoot() {
   try {
     return git('rev-parse --show-toplevel');
   } catch {
-    throw new Error('Isso não parece ser um repositório git.');
+    throw new Error(t.errors.notGitRepo);
   }
 }
 

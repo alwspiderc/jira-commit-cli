@@ -1,11 +1,4 @@
-const TYPE_NAMES = {
-  string: 'texto',
-  number: 'número',
-  integer: 'número inteiro',
-  boolean: 'true ou false',
-  array: 'lista',
-  object: 'objeto',
-};
+import { t } from '../i18n/index.js';
 
 const typeOf = (value) => {
   if (Array.isArray(value)) return 'array';
@@ -18,8 +11,8 @@ const matchesType = (value, type) =>
 
 const describe = (schema) => {
   if ('const' in schema) return JSON.stringify(schema.const);
-  if (schema.enum) return schema.enum.map((v) => JSON.stringify(v)).join(' ou ');
-  return TYPE_NAMES[schema.type] ?? schema.type;
+  if (schema.enum) return schema.enum.map((v) => JSON.stringify(v)).join(t.validate.or);
+  return t.validate.types[schema.type] ?? schema.type;
 };
 
 const child = (path, key) => (typeof key === 'number' ? `${path}[${key}]` : path ? `${path}.${key}` : key);
@@ -28,7 +21,7 @@ const child = (path, key) => (typeof key === 'number' ? `${path}[${key}]` : path
 // arquivo que o editor usa no autocomplete, então as regras ficam num lugar só
 export function validate(schema, value, path = '') {
   const result = { errors: [], warnings: [] };
-  const error = (message) => result.errors.push(`${path || 'o arquivo'} ${message}`);
+  const error = (message) => result.errors.push(`${path || t.validate.theFile} ${message}`);
   const merge = (other) => {
     result.errors.push(...other.errors);
     result.warnings.push(...other.warnings);
@@ -43,28 +36,28 @@ export function validate(schema, value, path = '') {
     }
     const sameType = schema.anyOf.findIndex((option) => option.type && matchesType(value, option.type));
     if (sameType >= 0) merge(attempts[sameType]);
-    else error(`deve ser ${schema.anyOf.map(describe).join(' ou ')}`);
+    else error(t.validate.mustBe(schema.anyOf.map(describe).join(t.validate.or)));
     return result;
   }
 
   if ('const' in schema && value !== schema.const) {
-    error(`deve ser ${describe(schema)}`);
+    error(t.validate.mustBe(describe(schema)));
     return result;
   }
   if (schema.enum && !schema.enum.includes(value)) {
-    error(`deve ser ${describe(schema)}`);
+    error(t.validate.mustBe(describe(schema)));
     return result;
   }
   if (schema.type && !matchesType(value, schema.type)) {
-    error(`deve ser ${describe(schema)}`);
+    error(t.validate.mustBe(describe(schema)));
     return result;
   }
 
   if (schema.pattern && typeof value === 'string' && !new RegExp(schema.pattern).test(value)) {
-    error(`está num formato inválido${schema['x-hint'] ? ` (${schema['x-hint']})` : ''}`);
+    error(t.validate.invalidFormat(schema['x-hint']));
   }
   if (schema.minimum !== undefined && typeof value === 'number' && value < schema.minimum) {
-    error(`deve ser no mínimo ${schema.minimum}`);
+    error(t.validate.minimum(schema.minimum));
   }
 
   if (schema.items && Array.isArray(value)) {
@@ -73,12 +66,12 @@ export function validate(schema, value, path = '') {
 
   if (schema.properties && typeOf(value) === 'object') {
     for (const key of schema.required ?? []) {
-      if (!(key in value)) result.errors.push(`${child(path, key)} é obrigatório`);
+      if (!(key in value)) result.errors.push(`${child(path, key)} ${t.validate.required}`);
     }
     for (const [key, item] of Object.entries(value)) {
       const rule = schema.properties[key];
       if (rule) merge(validate(rule, item, child(path, key)));
-      else if (schema.additionalProperties === false) result.warnings.push(`${child(path, key)} não é um campo conhecido`);
+      else if (schema.additionalProperties === false) result.warnings.push(`${child(path, key)} ${t.validate.unknown}`);
     }
   }
   return result;

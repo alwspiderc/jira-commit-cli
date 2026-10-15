@@ -83,7 +83,16 @@ colega só precisa de `npm install` para ter a CLI e o hook funcionando.
 - **Sugestões por IA** (opcional), a partir do diff do stage: a descrição do commit e o título
   da atividade criada.
 - **Não atrapalha:** pula merge, amend, mensagens que já têm a chave e commits por
-  cliente gráfico.
+  cliente gráfico; `JIRA_COMMIT_SKIP=1` pula o hook quando você quiser; sem a CLI instalada, o
+  commit segue com um aviso.
+- **Funciona em qualquer projeto e empresa:**
+  - projetos Node (com Husky) ou não (pasta `.githooks`);
+  - Jira Cloud ou Server/Data Center;
+  - vários Jiras na mesma máquina;
+  - português ou inglês;
+  - separador de produto, story points e quadro configuráveis;
+  - `.jira-commit.json` validado, com autocomplete no editor;
+  - `jira-commit doctor` para diagnosticar a instalação.
 
 ## Documentação
 

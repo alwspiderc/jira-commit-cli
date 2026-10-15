@@ -55,6 +55,7 @@ As regras ficam em [`schema/jira-commit.schema.json`](../schema/jira-commit.sche
 | Campo | Tipo | Padrão | Descrição |
 |---|---|---|---|
 | `projectKey` | string | — **obrigatório** | Chave do projeto no Jira. Ex.: `LOJA` |
+| `language` | `"pt"` \| `"en"` | *(idioma do sistema)* | Idioma da CLI e das sugestões da IA neste repositório |
 | `jiraUrl` | string | *(o Jira padrão do login)* | Jira deste repositório, quando você tem mais de um salvo. Ex.: `https://jira.cliente.com.br` |
 | `issueType` | string | `"Task"` | Tipo usado ao criar uma **tarefa sem pai**. Precisa existir no projeto (ex.: `Mobile`, `Backend`) |
 | `subtaskType` | string | descoberto no Jira | Tipo usado para **subtarefa**. Só defina se o projeto tiver mais de um tipo de subtarefa |
@@ -65,6 +66,7 @@ As regras ficam em [`schema/jira-commit.schema.json`](../schema/jira-commit.sche
 | `maxResults` | number | `20` | Máximo de atividades buscadas por vez (no menu e na busca pelo título no projeto) |
 | `ai` | boolean | `true` | `false` desliga as sugestões por IA (descrição do commit e título da atividade) neste repositório |
 | `aiModel` | string | `"claude-opus-5-5"` | Modelo da sugestão por IA. Ex.: `"claude-haiku-5-5"` para respostas mais rápidas |
+| `aiInstructions` | string | — | Orientação extra para a IA, somada às instruções da CLI. Ex.: `"Use os termos do domínio bancário"` |
 | `storyPoints` | boolean | `true` | `false` não pergunta a estimativa (story points) ao criar uma atividade |
 | `storyPointsScale` | number[] | `[1, 2, 3, 5, 8, 13]` | Opções de story points oferecidas ao criar uma atividade |
 | `productSeparator` | string | `" \| "` | O que separa o produto do resto do título (`LOJA DO BAIRRO \| Mobile: …`). Usado pelo `{product}` do `summaryPrefix` e para apagar o produto nas listas |
@@ -198,6 +200,12 @@ editar.
 | `lastEpic` | Último épico escolhido ao criar uma tarefa (`null` = "sem épico"). Vem selecionado na próxima vez |
 
 Apagar o arquivo só faz a CLI "esquecer" a última tarefa pai e as últimas atividades.
+
+## Idioma
+
+| Variável | Efeito |
+|---|---|
+| `JIRA_COMMIT_LANG` | `pt` ou `en`. Vale quando o `.jira-commit.json` não define `language`. Sem as duas, a CLI usa o idioma do sistema (`pt-*` → português, o resto → inglês) |
 
 ## Pular o hook
 

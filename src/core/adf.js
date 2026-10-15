@@ -2,7 +2,7 @@ const text = (t, marks) => ({ type: 'text', text: t, ...(marks && { marks }) });
 const paragraph = (t, marks) => ({ type: 'paragraph', content: [text(t, marks)] });
 const code = (t) => paragraph(t, [{ type: 'code' }]);
 
-export function adfDocument({ paragraphs = [], files = [], filesTitle = 'Arquivos alterados' }) {
+export function adfDocument({ paragraphs = [], files = [], filesTitle }) {
   const content = paragraphs.map((p) => paragraph(p));
   if (files.length) {
     content.push({ type: 'heading', attrs: { level: 4 }, content: [text(filesTitle)] });

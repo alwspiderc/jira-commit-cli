@@ -1,5 +1,6 @@
 import { currentSite, request } from './client.js';
 import { dialect } from './dialects.js';
+import { t } from '../../i18n/index.js';
 
 const enc = encodeURIComponent;
 const EPIC_LINK = 'com.pyxis.greenhopper.jira:gh-epic-link';
@@ -151,7 +152,7 @@ export async function createIssue({
     const link = await epicLink();
     if (link) fields[link.field] = link.value(epicKey);
   }
-  const text = description && dialect().document(description);
+  const text = description && dialect().document({ ...description, filesTitle: t.jira.changedFiles });
   if (text) fields.description = text;
   if (labels?.length) fields.labels = labels;
   if (components?.length) fields.components = components;
@@ -169,7 +170,7 @@ export async function getTransitions(key) {
 export function addComment(key, paragraphs) {
   return request(api(`/issue/${enc(key)}/comment`), {
     method: 'POST',
-    body: { body: dialect().document({ paragraphs }) },
+    body: { body: dialect().document({ paragraphs, filesTitle: t.jira.changedFiles }) },
   });
 }
 

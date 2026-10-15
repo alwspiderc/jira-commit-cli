@@ -2,6 +2,9 @@ import { afterEach, beforeEach, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { useSite } from '../src/infra/jira/client.js';
 import { addComment, createIssue, mostUsedEpic, openEpics, searchIssues } from '../src/infra/jira/api.js';
+import { setLanguage } from '../src/i18n/index.js';
+
+setLanguage('pt');
 
 const CLOUD = { url: 'https://a.atlassian.net', type: 'cloud', email: 'e@a', token: 't' };
 const SERVER = { url: 'https://jira.cliente.com', type: 'server', token: 'pat' };

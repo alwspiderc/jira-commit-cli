@@ -4,7 +4,7 @@ import { withBack } from './back.js';
 import { c, promptTheme } from './theme.js';
 
 const backTheme = {
-  style: { ...promptTheme.style, keysHelpTip: (keys) => promptTheme.style.keysHelpTip([...keys, ['esc', 'voltar']]) },
+  style: { ...promptTheme.style, keysHelpTip: (keys) => promptTheme.style.keysHelpTip([...keys, ['esc', 'back']]) },
 };
 
 const themed = (fn) => (config, context) => {

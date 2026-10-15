@@ -1,9 +1,10 @@
 import { matchIssues } from '../core/issue-match.js';
 import { projectSearchJql } from '../core/jql.js';
+import { t } from '../i18n/index.js';
 import { getIssue } from '../infra/jira/api.js';
 import { getRepoState } from '../infra/storage/repo-state.js';
 import { findMyIssues, searchProject } from '../services/issues.js';
-import { BACK, c, issueChoices, LAST_TAG, log, notice, searchSelect, section, withSpinner } from '../ui/index.js';
+import { BACK, c, issueChoices, lastTag, log, notice, searchSelect, section, withSpinner } from '../ui/index.js';
 import { askComment } from './comment.js';
 import { askDetails } from './commit-questions.js';
 import { createFromCommit } from './create-issue.js';
@@ -37,7 +38,7 @@ export async function chooseIssue(cfg, { commit, keyRegex, branch, prefetch }) {
         issues = await loadIssues(cfg, all, pending);
         pending = null;
       } catch (err) {
-        log.warn(`Não consegui falar com o Jira (${err.message}).`);
+        log.warn(t.menu.jiraUnreachable(err.message));
         return manualKey(cfg, keyRegex, { offline: true });
       }
     }
@@ -81,18 +82,17 @@ export async function chooseIssue(cfg, { commit, keyRegex, branch, prefetch }) {
 
 export async function linkBranchIssue(key) {
   try {
-    const { summary } = await withSpinner(`Vinculando ${key}, da branch…`, () => getIssue(key));
+    const { summary } = await withSpinner(t.menu.linkingBranch(key), () => getIssue(key));
     return { key, title: summary };
   } catch (err) {
-    log.warn(`Não consegui conferir ${key} no Jira (${err.message}). Vinculando mesmo assim.`);
+    log.warn(t.menu.branchUnchecked(key, err.message));
     return { key };
   }
 }
 
 function loadIssues(cfg, all, prefetch) {
-  return withSpinner(
-    all ? 'Buscando todas as suas atividades abertas…' : 'Buscando suas atividades no Jira…',
-    () => (prefetch && !all ? prefetch : findMyIssues(cfg, { all })),
+  return withSpinner(all ? t.menu.loadingAll : t.menu.loading, () =>
+    prefetch && !all ? prefetch : findMyIssues(cfg, { all }),
   );
 }
 
@@ -100,7 +100,7 @@ function issueMenu({ cfg, commit, branchKey, lastKey, found }, issues, all) {
   const taskChoices = issueChoices(issues, { branchKey, lastKey, productSeparator: cfg.productSeparator });
   const lastChoice =
     lastKey && lastKey !== branchKey && !issues.some((i) => i.key === lastKey)
-      ? [{ name: `${c.key(lastKey)}  ${LAST_TAG}`, short: lastKey, value: lastKey }]
+      ? [{ name: `${c.key(lastKey)}  ${lastTag()}`, short: lastKey, value: lastKey }]
       : [];
   const keys = new Set([...lastChoice, ...taskChoices].map((ch) => ch.value).filter(Boolean));
   const actions = menuActions({
@@ -110,7 +110,7 @@ function issueMenu({ cfg, commit, branchKey, lastKey, found }, issues, all) {
   });
 
   return searchSelect({
-    message: `Qual atividade é esse commit? ${c.dim(`${all ? '· todos os status ' : ''}· digite para buscar`)}`,
+    message: `${t.menu.question} ${c.dim(`${all ? `· ${t.menu.allStatuses} ` : ''}· ${t.common.typeToSearch}`)}`,
     pageSize: PAGE_SIZE,
     default: [branchKey, lastKey].find((k) => keys.has(k)) ?? taskChoices.find((ch) => ch.value)?.value,
     items: (term, remote) =>
@@ -118,7 +118,7 @@ function issueMenu({ cfg, commit, branchKey, lastKey, found }, issues, all) {
         ? searchResults(term, remote, { cfg, issues, branchKey, lastKey, actions })
         : [
             ...actions,
-            section(`── ${all ? 'todas as abertas' : 'suas atividades'} (${issues.length})`),
+            section(`── ${all ? t.menu.allOpen : t.menu.yours} (${issues.length})`),
             ...lastChoice,
             ...taskChoices,
           ],
@@ -132,49 +132,26 @@ function issueMenu({ cfg, commit, branchKey, lastKey, found }, issues, all) {
 }
 
 function menuActions({ all, hasDetails, hasComment }) {
+  const m = t.menu;
   return [
-    {
-      name: c.ok('+ Criar nova atividade'),
-      short: 'Criar nova atividade',
-      value: ACTION.NEW,
-      description: 'Cria uma tarefa ou subtarefa no Jira a partir deste commit e já vincula',
-    },
+    { name: c.ok(m.create), short: m.createShort, value: ACTION.NEW, description: m.createHelp },
     all
-      ? { name: c.warn('← Voltar aos status padrão'), short: 'Status padrão', value: ACTION.TOGGLE_STATUSES }
+      ? { name: c.warn(m.backToDefault), short: m.backToDefaultShort, value: ACTION.TOGGLE_STATUSES }
       : {
-          name: c.warn('⋯ Ver outros status'),
-          short: 'Outros status',
+          name: c.warn(m.otherStatuses),
+          short: m.otherStatusesShort,
           value: ACTION.TOGGLE_STATUSES,
-          description: 'Mostra todas as suas atividades abertas, não só as dos status padrão',
+          description: m.otherStatusesHelp,
         },
-    {
-      name: c.accent('✎ Digitar a chave'),
-      short: 'Digitar a chave',
-      value: ACTION.MANUAL,
-      description: 'Para uma atividade que não é sua ou não aparece na lista',
-    },
-    {
-      name: c.accent(`¶ ${hasDetails ? 'Editar' : 'Adicionar'} corpo / BREAKING CHANGE`),
-      short: 'Corpo / BREAKING CHANGE',
-      value: ACTION.DETAILS,
-      description: 'Texto mais longo e quebra de compatibilidade, os dois opcionais. Depois volta para esta lista',
-    },
-    {
-      name: c.accent(`❝ ${hasComment ? 'Editar comentário' : 'Comentar'} na atividade`),
-      short: 'Comentário na atividade',
-      value: ACTION.COMMENT,
-      description: 'Vai para a atividade que você escolher ou criar em seguida. Depois volta para esta lista',
-    },
-    {
-      name: c.dim('↷ Pular'),
-      short: 'Pular',
-      value: ACTION.SKIP,
-      description: 'Commita sem chave do Jira',
-    },
+    { name: c.accent(m.typeKey), short: m.typeKeyShort, value: ACTION.MANUAL, description: m.typeKeyHelp },
+    { name: c.accent(m.details(hasDetails)), short: m.detailsShort, value: ACTION.DETAILS, description: m.detailsHelp },
+    { name: c.accent(m.comment(hasComment)), short: m.commentShort, value: ACTION.COMMENT, description: m.commentHelp },
+    { name: c.dim(m.skip), short: m.skipShort, value: ACTION.SKIP, description: m.skipHelp },
   ];
 }
 
 export function searchResults(term, remote, { cfg, issues, branchKey, lastKey, actions = [] }) {
+  const m = t.menu;
   const local = matchIssues(issues, term);
   const isMine = (r) => issues.some((i) => i.key === r.key);
   const mine = [...local, ...remote.results.filter((r) => isMine(r) && !local.some((l) => l.key === r.key))];
@@ -185,11 +162,11 @@ export function searchResults(term, remote, { cfg, issues, branchKey, lastKey, a
   const choicesOf = (list, marks) => issueChoices(list, { ...marks, productSeparator: cfg.productSeparator });
 
   return [
-    ...(mine.length ? [section(`── suas atividades (${mine.length})`), ...choicesOf(mine, { branchKey, lastKey })] : []),
-    ...(searching ? [section('── buscando no projeto…')] : []),
-    ...(failed ? [section('── não consegui buscar no projeto')] : []),
-    ...(others.length ? [section(`── outras no projeto (${others.length})`), ...choicesOf(others)] : []),
-    ...(nothing ? [notice('Nenhuma atividade encontrada')] : []),
-    ...(actions.length ? [section('── ações'), ...actions] : []),
+    ...(mine.length ? [section(`── ${m.yours} (${mine.length})`), ...choicesOf(mine, { branchKey, lastKey })] : []),
+    ...(searching ? [section(`── ${m.searchingProject}`)] : []),
+    ...(failed ? [section(`── ${m.searchFailed}`)] : []),
+    ...(others.length ? [section(`── ${m.others} (${others.length})`), ...choicesOf(others)] : []),
+    ...(nothing ? [notice(m.none)] : []),
+    ...(actions.length ? [section(`── ${m.actions}`), ...actions] : []),
   ];
 }

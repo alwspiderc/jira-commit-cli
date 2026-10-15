@@ -3,6 +3,7 @@ import { createRequire } from 'node:module';
 import { join } from 'node:path';
 import { readPackage } from './package-json.js';
 import { PROJECT_FILE } from './storage/project-config.js';
+import { t } from '../i18n/index.js';
 
 export function loadCzConfig(root) {
   const pkg = readPackage(root)?.json;
@@ -11,7 +12,7 @@ export function loadCzConfig(root) {
   try {
     return createRequire(join(root, 'package.json'))(file);
   } catch (err) {
-    throw new Error(`Não consegui ler o ${file} (${err.message}).`);
+    throw new Error(t.errors.czUnreadable(file, err.message));
   }
 }
 
