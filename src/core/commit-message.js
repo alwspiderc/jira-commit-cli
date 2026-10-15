@@ -5,6 +5,11 @@ export function issueKeyRegex(projectKey) {
   return new RegExp(`\\b${projectKey}-\\d+\\b`);
 }
 
+export function parseIssueKey(projectKey, token = '') {
+  const match = token.trim().toUpperCase().match(new RegExp(`^(?:${projectKey}-)?(\\d+)$`));
+  return match ? `${projectKey}-${match[1]}` : null;
+}
+
 export function splitConventional(line) {
   const m = line.match(CONVENTIONAL_HEADER);
   return m ? { prefix: m[1], subject: m[2] } : { prefix: '', subject: line };

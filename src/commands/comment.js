@@ -1,4 +1,4 @@
-import { issueKeyRegex } from '../core/commit-message.js';
+import { issueKeyRegex, parseIssueKey } from '../core/commit-message.js';
 import { currentBranch } from '../infra/git.js';
 import { issueUrl } from '../infra/jira/client.js';
 import { openProject } from '../services/project.js';
@@ -42,7 +42,7 @@ export async function comment(args = []) {
 }
 
 function parseArgs(cfg, [first = '', ...rest]) {
-  const key = first.toUpperCase().match(new RegExp(`^(?:${cfg.projectKey}-)?(\d+)$`));
-  if (key) return { key: `${cfg.projectKey}-${key[1]}`, text: rest.join(' ').trim() };
+  const key = parseIssueKey(cfg.projectKey, first);
+  if (key) return { key, text: rest.join(' ').trim() };
   return { key: null, text: [first, ...rest].join(' ').trim() };
 }

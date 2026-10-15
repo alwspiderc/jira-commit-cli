@@ -6,6 +6,7 @@ import {
   detailLines,
   formatMessage,
   issueKeyRegex,
+  parseIssueKey,
   keyReserve,
   splitConventional,
 } from '../src/core/commit-message.js';
@@ -26,6 +27,13 @@ describe('commit-message', () => {
     assert.deepEqual(splitConventional('feat(home): adiciona card'), { prefix: 'feat(home): ', subject: 'adiciona card' });
     assert.deepEqual(splitConventional('fix!: corrige'), { prefix: 'fix!: ', subject: 'corrige' });
     assert.deepEqual(splitConventional('adiciona card'), { prefix: '', subject: 'adiciona card' });
+  });
+
+  it('lê a chave digitada com ou sem o prefixo do projeto', () => {
+    assert.equal(parseIssueKey('APP', '12'), 'APP-12');
+    assert.equal(parseIssueKey('APP', ' app-12 '), 'APP-12');
+    assert.equal(parseIssueKey('APP', 'texto'), null);
+    assert.equal(parseIssueKey('APP', 'OUTRO-12'), null);
   });
 
   it('acha a chave do projeto', () => {
