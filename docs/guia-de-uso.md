@@ -137,7 +137,8 @@ O `init` pode ser rodado de novo sem problema: ele só pergunta o que ainda falt
 **b) Configura o questionário do commit** (a seção `commit` do `.jira-commit.json`):
 - se o projeto tem um **`.cz-config.js`**, oferece importar os tipos, os escopos e o
   limite de caracteres dele;
-- senão, oferece os tipos padrão do Conventional Commits, sem escopos.
+- senão, oferece os tipos padrão da CLI (os do Conventional Commits mais `patch`, `wip` e
+  `merge`), sem escopos.
 
 Se você recusar, o `init` grava `"commit": false` e não pergunta de novo. Detalhes na
 [seção 6](#6-questionário-do-commit-tipo-escopo-e-descrição).

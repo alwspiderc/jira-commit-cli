@@ -59,7 +59,7 @@ sem `-m`). Veja o fluxo no [guia de uso](guia-de-uso.md#6-questionário-do-commi
 
 | Campo | Tipo | Padrão | Descrição |
 |---|---|---|---|
-| `types` | (string \| `{ value, description }`)[] | tipos do Conventional Commits | Tipos da lista. A `description` aparece apagada ao lado do tipo e também entra no filtro |
+| `types` | (string \| `{ value, description }`)[] | tipos padrão da CLI (Conventional Commits + `patch`, `wip`, `merge`) | Tipos da lista. A `description` aparece apagada ao lado do tipo e também entra no filtro |
 | `scopes` | string[] | `[]` | Escopos da lista. Vazio = a pergunta de escopo não aparece |
 | `headerMaxLength` | number | `100` | Tamanho máximo da 1ª linha. A validação da descrição já desconta o espaço da chave do Jira |
 
