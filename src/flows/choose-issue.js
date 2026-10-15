@@ -163,7 +163,7 @@ function menuActions({ all, hasDetails, hasComment }) {
   ];
 }
 
-function searchResults(term, remote, { cfg, issues, branchKey, lastKey, actions }) {
+export function searchResults(term, remote, { cfg, issues, branchKey, lastKey, actions = [] }) {
   const local = matchIssues(issues, term);
   const isMine = (r) => issues.some((i) => i.key === r.key);
   const mine = [...local, ...remote.results.filter((r) => isMine(r) && !local.some((l) => l.key === r.key))];
@@ -178,7 +178,6 @@ function searchResults(term, remote, { cfg, issues, branchKey, lastKey, actions 
     ...(failed ? [section('── não consegui buscar no projeto')] : []),
     ...(others.length ? [section(`── outras no projeto (${others.length})`), ...issueChoices(others)] : []),
     ...(nothing ? [notice('Nenhuma atividade encontrada')] : []),
-    section('── ações'),
-    ...actions,
+    ...(actions.length ? [section('── ações'), ...actions] : []),
   ];
 }

@@ -37,9 +37,11 @@ jira-commit-cli/
 │  │  ├─ hook.js                Chamado pelo git: lê a mensagem, chama os flows e grava o resultado
 │  │  ├─ init.js                Cria .jira-commit.json, importa do cz, instala o hook e o npm run commit
 │  │  ├─ login.js               Salva e testa as credenciais
-│  │  └─ list.js                Lista atividades (mesma árvore do menu)
+│  │  ├─ list.js                Lista atividades (mesma árvore do menu)
+│  │  └─ comment.js             Comenta numa atividade fora do commit
 │  ├─ flows/
 │  │  ├─ choose-issue.js        Menu de atividades: lista, busca, ações (criar, outros status, pular…)
+│  │  ├─ pick-issue.js          Escolha simples de atividade (lista + busca), usada pelo comando comment
 │  │  ├─ create-issue.js        Criação de tarefa/subtarefa a partir do commit
 │  │  ├─ issue-fields.js        Perguntas da criação: tipo, pai, épico, story points
 │  │  ├─ after-create.js        Sprint ativa e status inicial (falhas não abortam o commit)

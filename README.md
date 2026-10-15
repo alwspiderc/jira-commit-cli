@@ -54,6 +54,7 @@ Commite o `.jira-commit.json` gerado: ele é a configuração do time.
 | `jira-commit list` | Lista suas atividades nos status padrão |
 | `jira-commit list --todos` | Lista todas as suas atividades abertas |
 | `jira-commit list --status "NOME"` | Lista só um status |
+| `jira-commit comment [CHAVE] ["texto"]` | Comenta numa atividade (sem chave, mostra a lista; sem texto, pergunta) |
 | `jira-commit hook <arquivo> [origem]` | Chamado pelo git. Não precisa rodar à mão |
 
 ## Destaques

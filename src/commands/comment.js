@@ -1,0 +1,48 @@
+import { issueKeyRegex } from '../core/commit-message.js';
+import { currentBranch } from '../infra/git.js';
+import { issueUrl } from '../infra/storage/credentials.js';
+import { loadProjectConfig } from '../infra/storage/project-config.js';
+import { BACK, runSteps } from '../utils/steps.js';
+import { c, header, icon, log } from '../ui/index.js';
+import { askComment, sendComment } from '../flows/comment.js';
+import { pickIssue } from '../flows/pick-issue.js';
+
+export async function comment(args = []) {
+  const cfg = loadProjectConfig();
+  const keyRegex = issueKeyRegex(cfg.projectKey);
+  const { key, text } = parseArgs(cfg, args);
+  const branch = currentBranch();
+  header(`${cfg.projectKey} · comentário`, c.dim('esc volta ao passo anterior'));
+
+  const answers = await runSteps(
+    [
+      {
+        key: 'key',
+        when: () => !key,
+        run: () => pickIssue(cfg, { message: 'Comentar em qual atividade?', branch, keyRegex }),
+      },
+      { key: 'text', when: () => !text, run: () => askComment() },
+    ],
+    { key, text },
+  );
+  if (answers === BACK) {
+    log.hint('Cancelado.');
+    console.log();
+    return;
+  }
+
+  if (!(await sendComment(answers.key, answers.text))) {
+    log.hint('Comentário vazio, nada foi enviado.');
+    console.log();
+    return;
+  }
+  const link = issueUrl(answers.key);
+  if (link) log.hint(`${icon.link} ${link}`);
+  console.log();
+}
+
+function parseArgs(cfg, [first = '', ...rest]) {
+  const key = first.toUpperCase().match(new RegExp(`^(?:${cfg.projectKey}-)?(\d+)$`));
+  if (key) return { key: `${cfg.projectKey}-${key[1]}`, text: rest.join(' ').trim() };
+  return { key: null, text: [first, ...rest].join(' ').trim() };
+}

@@ -12,7 +12,7 @@ opções do `.jira-commit.json`, veja [configuracao.md](configuracao.md).
 - [7. O dia a dia: commitando](#7-o-dia-a-dia-commitando)
 - [8. Criar atividade a partir do commit](#8-criar-atividade-a-partir-do-commit)
 - [9. Sugestão de título por IA](#9-sugestão-de-título-por-ia)
-- [10. Listar suas atividades](#10-listar-suas-atividades)
+- [10. Fora do commit: listar e comentar](#10-fora-do-commit-listar-e-comentar)
 - [11. Quando o hook não aparece (ou não deveria aparecer)](#11-quando-o-hook-não-aparece-ou-não-deveria-aparecer)
 - [12. Problemas comuns](#12-problemas-comuns)
 - [13. Perguntas frequentes](#13-perguntas-frequentes)
@@ -520,9 +520,11 @@ export ANTHROPIC_API_KEY="sk-ant-..."
 > **Privacidade:** com a IA ligada, o diff do commit é enviado para a API da Anthropic.
 > Siga a política da empresa sobre envio de código para serviços externos.
 
-## 10. Listar suas atividades
+## 10. Fora do commit: listar e comentar
 
-Fora do commit, para consultar rapidamente:
+### Listar suas atividades
+
+Para consultar rapidamente:
 
 ```bash
 npx --no-install jira-commit list                      # status padrão (statuses)
@@ -535,6 +537,24 @@ O `--status` aceita o nome como aparece na tela do Jira e não diferencia maiús
 minúsculas. Se o nome não existir, a CLI mostra os status válidos do projeto.
 
 A saída usa a mesma árvore do menu do commit.
+
+### Comentar numa atividade
+
+```bash
+npx --no-install jira-commit comment                                  # escolhe a atividade e escreve
+npx --no-install jira-commit comment LOJA-2410                        # só pergunta o texto
+npx --no-install jira-commit comment 2410 "subi o ajuste em develop"  # direto, sem perguntas
+```
+
+- **Sem chave:** abre a lista das suas atividades, com a mesma busca do menu do commit (digite
+  para filtrar, e o Jira completa com as outras do projeto). O cursor começa na atividade da
+  branch ou na última usada nela.
+- **Chave:** aceita `LOJA-2410` ou só o número, `2410`.
+- **Texto:** sem ele, a CLI pergunta. Use `|` para quebrar parágrafo, como no corpo do commit.
+- **Esc** volta da pergunta do texto para a lista; na lista, cancela.
+
+Para comentar junto com um commit, use a ação **❝ Comentar na atividade** do menu
+([seção 7](#7-o-dia-a-dia-commitando)).
 
 ## 11. Quando o hook não aparece (ou não deveria aparecer)
 

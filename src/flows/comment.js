@@ -12,14 +12,18 @@ export async function askComment(current = '') {
   return text === BACK ? BACK : text.trim();
 }
 
-export async function postComment(key, text) {
+export async function sendComment(key, text) {
   const body = commentDocument(text);
   if (!body) return false;
+  await withSpinner('Comentando no Jira…', () => addComment(key, body), {
+    done: `Comentário adicionado em ${c.key(key)}`,
+  });
+  return true;
+}
+
+export async function postComment(key, text) {
   try {
-    await withSpinner('Comentando no Jira…', () => addComment(key, body), {
-      done: `Comentário adicionado em ${c.key(key)}`,
-    });
-    return true;
+    return await sendComment(key, text);
   } catch (err) {
     log.warn(`Não consegui comentar em ${key} (${err.message}). O commit segue normalmente.`);
     return false;

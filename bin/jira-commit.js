@@ -3,6 +3,7 @@ import { hook } from '../src/commands/hook.js';
 import { login } from '../src/commands/login.js';
 import { list } from '../src/commands/list.js';
 import { init } from '../src/commands/init.js';
+import { comment } from '../src/commands/comment.js';
 import { c, icon, log } from '../src/ui/index.js';
 import { VERSION } from '../src/version.js';
 
@@ -13,9 +14,10 @@ const commands = {
   login,
   list: () => list(args),
   init,
+  comment: () => comment(args),
 };
 
-const cmd = (name, desc) => `    ${c.accent(name.padEnd(22))} ${desc}`;
+const cmd = (name, desc) => `    ${c.accent(name.padEnd(27))} ${desc}`;
 const help = `
   ${icon.brand} ${c.brand('jira-commit')} ${c.dim(`v${VERSION}`)}
   ${c.dim('Liga cada commit a uma atividade do Jira, ou cria uma na hora.')}
@@ -28,6 +30,7 @@ ${cmd('init', 'Configura o repositório e instala o hook')}
 ${cmd('list', 'Suas atividades nos status padrão')}
 ${cmd('list --todos', 'Todas as suas atividades abertas')}
 ${cmd('list --status "NOME"', 'Só as atividades nesse status')}
+${cmd('comment [CHAVE] ["texto"]', 'Comenta numa atividade do Jira')}
 
   ${c.dim('O menu aparece sozinho no git commit (pelo terminal).')}
 `;
