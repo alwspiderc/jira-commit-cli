@@ -9,7 +9,8 @@
   <img alt="Node 22+" src="https://img.shields.io/badge/node-%E2%89%A5%2022-339933?logo=node.js&logoColor=white">
   <img alt="Jira Cloud e Server" src="https://img.shields.io/badge/jira-Cloud%20%7C%20Server%2FDC-0052CC?logo=jira&logoColor=white">
   <img alt="Português e inglês" src="https://img.shields.io/badge/idiomas-pt%20%7C%20en-8A2BE2">
-  <img alt="Testes" src="https://img.shields.io/badge/testes-node%3Atest-brightgreen">
+  <a href="https://github.com/alwspiderc/jira-commit-cli/actions/workflows/test.yml"><img alt="CI" src="https://github.com/alwspiderc/jira-commit-cli/actions/workflows/test.yml/badge.svg?branch=develop"></a>
+  <a href="CHANGELOG.md"><img alt="Versão 0.3.0" src="https://img.shields.io/badge/vers%C3%A3o-0.3.0-blue"></a>
 </p>
 
 ---
@@ -114,6 +115,7 @@ Depois do `init`, **commite** o `.jira-commit.json`, o `package.json`, o lock e 
 | 📘 [**Guia de uso**](docs/guia-de-uso.md) | Quem usa no dia a dia | Instalação, o commit passo a passo, criar e comentar atividades, IA, problemas comuns e perguntas frequentes |
 | ⚙️ [**Configuração**](docs/configuracao.md) | Quem configura um repositório | Todos os campos do `.jira-commit.json`, credenciais, variáveis de ambiente e o hook |
 | 🏗️ [**Arquitetura**](docs/arquitetura.md) | Quem mantém a CLI | Camadas, fluxos, Jira Cloud × Server, decisões, testes e como contribuir |
+| 📋 [**Changelog**](CHANGELOG.md) | Quem atualiza a CLI | O que mudou em cada versão e o que pode exigir ajuste |
 
 ## Requisitos
 
