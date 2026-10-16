@@ -1,9 +1,21 @@
 {
   "name": "jira-commit-cli",
   "version": "0.3.0",
-  "private": true,
   "description": "Liga cada commit a uma issue do Jira Cloud (escolhe uma existente ou cria na hora)",
   "author": "Ester <alwesterc@gmail.com>",
+  "license": "MIT",
+  "keywords": [
+    "jira",
+    "jira-cloud",
+    "git",
+    "commit",
+    "cli",
+    "conventional-commits"
+  ],
+  "homepage": "https://github.com/alwspiderc/jira-commit-cli#readme",
+  "bugs": {
+    "url": "https://github.com/alwspiderc/jira-commit-cli/issues"
+  },
   "type": "module",
   "bin": {
     "jira-commit": "bin/jira-commit.js"
