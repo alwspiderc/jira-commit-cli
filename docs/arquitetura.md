@@ -512,8 +512,9 @@ Use `'\r'` para Enter e `'\x1b[B'` para a seta para baixo.
 
 ## 11. Lançar uma versão
 
-O pacote é **interno**: `"private": true` impede o `npm publish` por engano, e os times
-instalam pelo git. Por isso o `package.json` precisa ficar na raiz do repositório.
+O pacote é publicado no npm como `jira-commit-cli`. O campo `files` do `package.json` define o
+que entra no pacote (`bin`, `src`, `schema`, mais README, LICENSE e package.json); confira com
+`npm pack --dry-run` antes de publicar.
 
 1. No [`CHANGELOG.md`](../CHANGELOG.md), crie a seção da versão com a data e o que mudou. O que
    exige ajuste de quem atualiza vai em **⚠️ Pode exigir ajuste**.
@@ -522,4 +523,4 @@ instalam pelo git. Por isso o `package.json` precisa ficar na raiz do repositór
 4. Tag e push: `git tag v0.4.0 && git push && git push --tags`.
 5. Release no GitHub, com o texto da versão no changelog:
    `gh release create v0.4.0 --title "v0.4.0" --notes-file notas.md`.
-6. Quem fixou a versão troca a tag na instalação (`...jira-commit-cli.git#v0.4.0`).
+6. Publique no npm: `npm test && npm publish` (pede o código da 2FA).

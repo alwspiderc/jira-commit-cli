@@ -45,7 +45,7 @@ feat(home): adiciona card de benefício   →   feat(home): LOJA-2411 adiciona c
 
 ```bash
 # 1. No repositório (num projeto sem Node, use -g para instalar globalmente)
-npm i -D git+https://github.com/alwspiderc/jira-commit-cli.git
+npm i -D jira-commit-cli
 
 # 2. Uma vez por máquina: conecta ao seu Jira (Cloud ou Server)
 npx --no-install jira-commit login
@@ -125,6 +125,6 @@ Depois do `init`, **commite** o `.jira-commit.json`, o `package.json`, o lock e 
   - **Cloud:** API token, gerado em [id.atlassian.com](https://id.atlassian.com/manage-profile/security/api-tokens).
   - **Server/Data Center:** token pessoal (PAT), criado no seu perfil do Jira.
 
-> [!NOTE]
-> **Uso interno.** O pacote não é publicado no npm (`"private": true` impede publicação por
-> engano). Ele é instalado direto deste repositório, então é preciso ter acesso a ele no GitHub.
+## Licença
+
+[MIT](LICENSE) © Ester (alwspiderc)

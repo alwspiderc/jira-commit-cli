@@ -52,30 +52,25 @@ atividade sem abrir o Jira.
 
 ## 3. Instalação
 
-A CLI é **interna**: não é publicada no npm e é instalada direto do repositório git. Escolha
-um dos jeitos abaixo.
+A CLI é publicada no npm como [`jira-commit-cli`](https://www.npmjs.com/package/jira-commit-cli).
+Escolha um dos jeitos abaixo.
 
 ### No projeto (recomendado)
 
 ```bash
-npm i -D git+https://github.com/alwspiderc/jira-commit-cli.git
+npm i -D jira-commit-cli
 ```
 
 A CLI entra no `package.json`, e qualquer pessoa que rodar `npm install` fica com ela.
 
-- **Acesso:** o repositório é privado. Se `git clone` desse endereço funciona na sua máquina,
-  a instalação também funciona.
-- **Versão fixa:** acrescente a tag no fim (`...jira-commit-cli.git#v0.1.0`). Sem tag, o npm
-  instala o que estiver na branch principal.
-- **Atualizar:** `npm update jira-commit-cli`, ou reinstale com a tag nova.
-- **CI:** o `npm ci` do CI também precisa de acesso ao repositório (ex.: um token no GitHub
-  Actions). Se o CI não tiver acesso, use a instalação só na sua máquina, abaixo.
+- **Versão fixa:** `npm i -D jira-commit-cli@0.3.0`. Sem versão, o npm instala a mais recente.
+- **Atualizar:** `npm update jira-commit-cli`, ou `npm i -D jira-commit-cli@latest`.
 
 ### Só na sua máquina, sem mexer no `package.json`
 
 ```bash
-npm i --no-save git+https://github.com/alwspiderc/jira-commit-cli.git   # do git
-npm i --no-save ../caminho/para/jira-commit-cli                          # de uma pasta local
+npm i --no-save jira-commit-cli                    # do npm
+npm i --no-save ../caminho/para/jira-commit-cli    # de uma pasta local
 ```
 
 O próximo `npm install` remove o pacote, e aí o menu some do commit até você instalar de
@@ -84,7 +79,7 @@ novo. O `init` oferece pôr a CLI no `package.json` para evitar isso.
 ### Global: para projetos sem Node ou para todos os seus repositórios
 
 ```bash
-npm i -g git+https://github.com/alwspiderc/jira-commit-cli.git
+npm i -g jira-commit-cli
 jira-commit init      # o comando fica disponível em qualquer pasta, sem o npx
 ```
 
