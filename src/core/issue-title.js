@@ -1,8 +1,16 @@
 export const DEFAULT_PRODUCT_SEPARATOR = ' | ';
 
 export function capitalizeTitle(title, prefix = '') {
-  const head = prefix && title.startsWith(prefix) ? prefix : '';
-  return head + title.slice(head.length).replace(/^(\s*)(\p{Ll})/u, (_, space, letter) => space + letter.toUpperCase());
+  const head = prefix && title.startsWith(prefix) ? prefix : headLike(title, prefix);
+  return head + title.slice(head.length).replace(/^([^\p{L}\p{N}]*)(\p{Ll})/u, (_, lead, letter) => lead + letter.toUpperCase());
+}
+
+/** Prefixo editado ("OUTRO | Mobile: ..."): vale o trecho até o mesmo sinal que fecha o prefixo (":"). */
+function headLike(title, prefix) {
+  const end = prefix.trimEnd().slice(-1);
+  if (!end || /[\p{L}\p{N}]/u.test(end)) return '';
+  const idx = title.indexOf(end);
+  return idx >= 0 ? title.slice(0, idx + 1) : '';
 }
 
 export function resolvePrefix(template, product) {
