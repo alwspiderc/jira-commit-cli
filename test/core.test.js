@@ -93,6 +93,14 @@ describe('issue-title', () => {
     assert.equal(capitalizeTitle('atualiza link', 'outro: '), 'Atualiza link');
   });
 
+  it('capitaliza com o prefixo editado ou pontuação no começo', () => {
+    assert.equal(capitalizeTitle('Q | M: atualiza link', 'P | M: '), 'Q | M: Atualiza link');
+    assert.equal(capitalizeTitle('P | M:atualiza', 'P | M: '), 'P | M:Atualiza');
+    assert.equal(capitalizeTitle('P | M: "atualiza"', 'P | M: '), 'P | M: "Atualiza"');
+    assert.equal(capitalizeTitle('P | M: ícone novo', 'P | M: '), 'P | M: Ícone novo');
+    assert.equal(capitalizeTitle('2 telas novas', ''), '2 telas novas');
+  });
+
   it('resolve o prefixo do produto', () => {
     assert.equal(resolvePrefix('{product} | Mobile: ', 'TÁTICO'), 'TÁTICO | Mobile: ');
     assert.equal(resolvePrefix('{product} | Mobile: ', ''), '');
