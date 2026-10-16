@@ -1,4 +1,4 @@
-import { loadSite } from '../storage/credentials.js';
+import { isSecureUrl, loadSite } from '../storage/credentials.js';
 import { t } from '../../i18n/index.js';
 
 const TIMEOUT_MS = 10_000;
@@ -45,6 +45,7 @@ function authorization({ type, email, token }) {
 
 export async function request(path, { method = 'GET', body } = {}) {
   const site = currentSite();
+  if (!isSecureUrl(site.url)) throw new Error(t.errors.insecureUrl(site.url));
   const res = await fetch(`${site.url}${path}`, {
     method,
     headers: {

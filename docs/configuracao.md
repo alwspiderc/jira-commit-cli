@@ -81,7 +81,7 @@ O `jira-commit doctor` mostra quais são.
 | Campo | Tipo | Padrão | Para que serve |
 | --- | --- | --- | --- |
 | `projectKey` | texto | **obrigatório** | Chave do projeto no Jira. Ex.: `LOJA` |
-| `jiraUrl` | texto | o Jira padrão do `login` | Qual Jira este repositório usa, quando você fez login em mais de um |
+| `jiraUrl` | texto | o Jira padrão do `login` | Qual Jira este repositório usa, quando você fez login em mais de um. Precisa ser `https://` (`http://` só no `localhost`) e já estar salvo pelo `login` |
 | `language` | `"pt"` \| `"en"` | idioma do sistema | Idioma da CLI e das sugestões da IA neste repositório |
 
 #### Lista de atividades
@@ -116,13 +116,13 @@ O `jira-commit doctor` mostra quais são.
 
 | Campo | Tipo | Padrão | Para que serve |
 | --- | --- | --- | --- |
-| `ai` | `true` \| `false` | `true` | `false` desliga as sugestões neste repositório |
+| `ai` | `true` \| `false` | `false` | `true` liga as sugestões neste repositório. O diff do commit vai para a API da Anthropic |
 | `aiModel` | texto | `"claude-opus-5-5"` | Modelo das sugestões. Ex.: `"claude-haiku-5-5"`, mais rápido e mais barato |
 | `aiInstructions` | texto | — | Orientação do projeto, somada às instruções da CLI. Ex.: `"Use os termos do domínio bancário"` |
 
 > [!NOTE]
-> A IA só funciona com a variável `ANTHROPIC_API_KEY` definida
-> ([seção 4](#4-variáveis-de-ambiente)), mesmo com `"ai": true`.
+> A IA só liga com as duas coisas: `"ai": true` no `.jira-commit.json` **e** a variável
+> `ANTHROPIC_API_KEY` definida ([seção 4](#4-variáveis-de-ambiente)).
 
 ### A seção `commit`
 
@@ -246,6 +246,10 @@ Jiras** (ex.: um por cliente):
 - Cada `login` adiciona um Jira ou troca o token de um que já está salvo. O primeiro vira o
   padrão; nos seguintes, o login pergunta se você quer trocar.
 - O formato antigo, de um Jira só (`baseUrl`, `email`, `token`), é convertido sozinho.
+- O endereço precisa ser `https://`. O `http://` só é aceito no `localhost`, porque o token iria
+  sem criptografia.
+- A pasta é criada só com acesso seu (`700`) e o arquivo com `600`. No Windows essas permissões
+  não têm efeito: a proteção é a da sua pasta de usuário.
 
 > [!CAUTION]
 > O token fica em texto puro. No Linux e no macOS o arquivo é criado com permissão `600`. No
@@ -281,13 +285,13 @@ Apagar o arquivo só faz a CLI "esquecer" essas escolhas.
 
 | Variável | Efeito |
 | --- | --- |
-| `JIRA_BASE_URL` | Endereço do Jira |
+| `JIRA_BASE_URL` | Endereço do Jira. **Obrigatória** para as variáveis `JIRA_*` valerem |
 | `JIRA_EMAIL` | E-mail (Cloud) |
-| `JIRA_API_TOKEN` | Token. **Com ele definido, as variáveis `JIRA_*` valem no lugar do arquivo de credenciais** (útil em CI) |
+| `JIRA_API_TOKEN` | Token. **Com ele e a `JIRA_BASE_URL` definidos, as variáveis `JIRA_*` valem no lugar do arquivo de credenciais** (útil em CI). O token nunca vai para o `jiraUrl` do repositório, só para a `JIRA_BASE_URL` |
 | `JIRA_TYPE` | `cloud` ou `server`. Padrão: `cloud` quando há `JIRA_EMAIL`, senão `server` |
 | `JIRA_COMMIT_LANG` | `pt` ou `en`. Vale quando o `.jira-commit.json` não define `language` |
 | `JIRA_COMMIT_SKIP` | `1` faz o hook não fazer nada: nem pergunta nem mexe na mensagem |
-| `ANTHROPIC_API_KEY` | Liga as sugestões por IA |
+| `ANTHROPIC_API_KEY` | Chave das sugestões por IA. Só vale com `"ai": true` no `.jira-commit.json` |
 | `ANTHROPIC_AUTH_TOKEN` | Alternativa à `ANTHROPIC_API_KEY` |
 | `NO_COLOR` | Qualquer valor desliga as cores |
 

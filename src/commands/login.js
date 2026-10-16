@@ -1,7 +1,7 @@
 import { t } from '../i18n/index.js';
 import { getMyself } from '../infra/jira/api.js';
 import { deploymentType, useSite } from '../infra/jira/client.js';
-import { listSites, normalizeUrl, saveSite } from '../infra/storage/credentials.js';
+import { isSecureUrl, listSites, normalizeUrl, saveSite } from '../infra/storage/credentials.js';
 import { c, confirm, header, input, log, password, select, withSpinner } from '../ui/index.js';
 
 const TOKEN_PAGE = 'https://id.atlassian.com/manage-profile/security/api-tokens';
@@ -14,7 +14,7 @@ export async function login() {
   const url = normalizeUrl(
     await input({
       message: `${t.login.url} ${c.dim(`· ${t.login.urlExample}`)}`,
-      validate: (v) => /^https?:\/\/.+/.test(v.trim()) || t.login.urlInvalid,
+      validate: (v) => isSecureUrl(v.trim()) || t.login.urlInvalid,
     }),
   );
   const type = await detectType(url);

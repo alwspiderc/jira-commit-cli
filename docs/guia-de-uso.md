@@ -540,17 +540,20 @@ O `--status` não diferencia maiúsculas. Se o nome não existir, a CLI mostra o
 
 ## 11. Sugestões por IA
 
-Opcional. Com a variável `ANTHROPIC_API_KEY` definida, a IA ajuda em dois lugares:
+Opcional e **desligada por padrão**. Ligada, a IA ajuda em dois lugares:
 
 | Onde | O que ela faz |
 | --- | --- |
 | **Descrição do commit** | Lê o diff do stage, a lista de arquivos e as ~10 últimas descrições do repositório, para seguir o estilo do time. O pedido sai assim que o commit começa, enquanto você escolhe tipo e escopo |
 | **Título da atividade** | Lê o diff, os arquivos, o commit e a tarefa pai, e sugere um título curto: no infinitivo em português ("Criar card de benefício na Home") ou no imperativo em inglês ("Add benefit card to home") |
 
-As sugestões chegam **preenchidas e editáveis**. Sem a chave, ou se a IA falhar ou demorar mais
+As sugestões chegam **preenchidas e editáveis**. Desligada, ou se a IA falhar ou demorar mais
 de 8 segundos, tudo funciona como antes, só sem sugestão.
 
-**Como ligar:**
+**Como ligar:** são dois passos, e a IA só funciona com os dois.
+
+1. No `.jira-commit.json` do repositório, `"ai": true`.
+2. Na sua máquina, a variável `ANTHROPIC_API_KEY`:
 
 ```bash
 # Git Bash / Linux / macOS (no ~/.bashrc para ficar permanente)
@@ -566,12 +569,13 @@ export ANTHROPIC_API_KEY="sk-ant-..."
 
 | Campo | Efeito |
 | --- | --- |
-| `"ai": false` | Desliga a IA neste repositório, mesmo com a chave definida |
+| `"ai": true` | Liga a IA neste repositório. Sem ele, a IA fica desligada mesmo com a chave definida |
 | `"aiModel": "claude-haiku-5-5"` | Troca o modelo. O padrão é `claude-opus-5-5` com esforço baixo; o Haiku é mais rápido e mais barato |
 | `"aiInstructions": "…"` | Orientação do projeto, somada às instruções da CLI. Ex.: `"Use os termos do domínio bancário"` |
 
 > [!WARNING]
-> **Privacidade:** com a IA ligada, o diff do commit é enviado para a API da Anthropic. Siga a
+> **Privacidade:** com a IA ligada, o diff do commit é enviado para a API da Anthropic, inclusive
+> um segredo que entre no stage por engano. Siga a
 > política da empresa sobre envio de código para serviços externos.
 
 ## 12. Idioma

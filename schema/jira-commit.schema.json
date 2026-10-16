@@ -15,7 +15,7 @@
     },
     "jiraUrl": {
       "type": "string",
-      "pattern": "^https?://",
+      "pattern": "^(https://|http://(localhost|127\\.0\\.0\\.1)(:[0-9]+)?(/|$))",
       "x-hint": "https://suaempresa.atlassian.net",
       "description": "Jira deste repositório, quando você tem mais de um salvo no login"
     },
@@ -35,7 +35,7 @@
     },
     "jql": { "type": "string", "description": "JQL próprio. Substitui statuses e o filtro de responsável" },
     "maxResults": { "type": "integer", "minimum": 1, "description": "Máximo de atividades buscadas por vez" },
-    "ai": { "type": "boolean", "description": "false desliga as sugestões por IA" },
+    "ai": { "type": "boolean", "description": "true liga as sugestões por IA (o diff vai para a API da Anthropic)" },
     "aiModel": { "type": "string", "description": "Modelo usado nas sugestões" },
     "aiInstructions": { "type": "string", "description": "Orientação extra para as sugestões da IA" },
     "storyPoints": { "type": "boolean", "description": "false não pergunta a estimativa" },

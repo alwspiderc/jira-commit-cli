@@ -4,7 +4,8 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { hasDependency, withHusky } from '../src/infra/package-json.js';
-import { migrateCredentials } from '../src/infra/storage/credentials.js';
+import { envSite, isSecureUrl, migrateCredentials } from '../src/infra/storage/credentials.js';
+import { aiEnabled } from '../src/infra/ai.js';
 import { addDevCommand, binCommand, detectPackageManager } from '../src/infra/package-manager.js';
 
 describe('package-json', () => {
@@ -59,5 +60,38 @@ describe('credentials', () => {
     const data = { default: 'https://a', sites: { 'https://a': { type: 'server', token: 't' } } };
     assert.deepEqual(migrateCredentials(data), data);
     assert.deepEqual(migrateCredentials({}), { default: null, sites: {} });
+  });
+
+  it('só usa o token das variáveis com JIRA_BASE_URL definida', () => {
+    assert.equal(envSite({ JIRA_API_TOKEN: 't' }), null);
+    assert.deepEqual(envSite({ JIRA_API_TOKEN: 't', JIRA_BASE_URL: 'https://a/', JIRA_EMAIL: 'e@x' }), {
+      url: 'https://a',
+      type: 'cloud',
+      email: 'e@x',
+      token: 't',
+    });
+  });
+
+  it('aceita http só no localhost', () => {
+    assert.ok(isSecureUrl('https://a.atlassian.net'));
+    assert.ok(isSecureUrl('http://localhost:8080'));
+    assert.ok(isSecureUrl('http://127.0.0.1/jira'));
+    assert.ok(!isSecureUrl('http://jira.empresa.com'));
+    assert.ok(!isSecureUrl('http://localhost.evil.com'));
+    assert.ok(!isSecureUrl('https://'));
+  });
+});
+
+describe('ai', () => {
+  it('fica desligada sem "ai": true, mesmo com a chave', () => {
+    const key = process.env.ANTHROPIC_API_KEY;
+    process.env.ANTHROPIC_API_KEY = 'k';
+    try {
+      assert.equal(aiEnabled({}), false);
+      assert.equal(aiEnabled({ ai: true }), true);
+    } finally {
+      if (key === undefined) delete process.env.ANTHROPIC_API_KEY;
+      else process.env.ANTHROPIC_API_KEY = key;
+    }
   });
 });

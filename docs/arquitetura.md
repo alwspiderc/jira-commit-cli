@@ -384,8 +384,9 @@ erro de rede devolvem `null`, e o fluxo usa o texto do commit.
 | **Busca no projeto** | Quem busca é o Jira, que respeita os acentos: `beneficio` não acha "benefício" |
 | **Árvore de um nível** | Só subtarefa → pai. Épicos não aparecem na árvore |
 | **Jira Server** | Testado com chamadas simuladas e com a detecção em Jiras públicos, sem uma instância real de teste |
-| **Credenciais** | Em texto puro. No Windows, a permissão `600` não tem efeito |
-| **IA** | A chave só é lida de variável de ambiente |
+| **Credenciais** | Em texto puro. No Windows, as permissões `700`/`600` não têm efeito |
+| **Hook** | Sem a CLI no projeto, usa o `jira-commit` global, que pode ser o pacote homônimo do npm se alguém o instalou |
+| **IA** | Desligada por padrão (`"ai": true` liga). A chave só é lida de variável de ambiente |
 | **Esc** | Leva ~0,5 s: o terminal espera para saber se não é o começo de uma seta |
 
 ## 9. Como contribuir

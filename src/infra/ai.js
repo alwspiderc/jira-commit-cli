@@ -4,7 +4,7 @@ const DEFAULT_MODEL = 'claude-opus-5-5';
 const TIMEOUT_MS = 8_000;
 
 export function aiEnabled(cfg) {
-  return cfg.ai !== false && Boolean(process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_AUTH_TOKEN);
+  return cfg.ai === true && Boolean(process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_AUTH_TOKEN);
 }
 
 export async function suggestTitle(cfg, { diff, files, subject, parentSummary }) {

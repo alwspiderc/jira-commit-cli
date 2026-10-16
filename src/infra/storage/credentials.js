@@ -1,12 +1,17 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { CONFIG_DIR } from './paths.js';
 import { t } from '../../i18n/index.js';
 
 const CREDENTIALS_FILE = join(CONFIG_DIR, 'credentials.json');
 const OWNER_ONLY = 0o600;
+const OWNER_ONLY_DIR = 0o700;
 
 export const normalizeUrl = (url) => url.trim().replace(/\/+$/, '');
+
+// Fora da própria máquina, http mandaria o token sem criptografia
+export const isSecureUrl = (url = '') =>
+  /^https:\/\/./i.test(url) || /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?(\/|$)/i.test(url);
 
 // Antes da v0.2 o arquivo guardava um site só: { baseUrl, email, token }
 export function migrateCredentials(data) {
@@ -24,8 +29,10 @@ function readCredentials() {
 }
 
 function writeCredentials(data) {
-  mkdirSync(CONFIG_DIR, { recursive: true });
+  mkdirSync(CONFIG_DIR, { recursive: true, mode: OWNER_ONLY_DIR });
   writeFileSync(CREDENTIALS_FILE, JSON.stringify(data, null, 2), { mode: OWNER_ONLY });
+  // o mode do writeFileSync só vale na criação: corrige um arquivo antigo com permissão aberta
+  chmodSync(CREDENTIALS_FILE, OWNER_ONLY);
 }
 
 export function listSites() {
@@ -41,17 +48,17 @@ export function saveSite({ url, makeDefault = false, ...site }) {
   writeCredentials(data);
 }
 
-function envSite(url) {
-  const token = process.env.JIRA_API_TOKEN;
-  const envUrl = process.env.JIRA_BASE_URL ?? url;
-  if (!token || !envUrl) return null;
-  const email = process.env.JIRA_EMAIL;
-  return { url: normalizeUrl(envUrl), type: process.env.JIRA_TYPE ?? (email ? 'cloud' : 'server'), email, token };
+// Exige JIRA_BASE_URL: cair no jiraUrl do .jira-commit.json deixaria o repositório decidir
+// para onde o token vai
+export function envSite(env = process.env) {
+  const { JIRA_API_TOKEN: token, JIRA_BASE_URL: url, JIRA_EMAIL: email, JIRA_TYPE: type } = env;
+  if (!token || !url) return null;
+  return { url: normalizeUrl(url), type: type ?? (email ? 'cloud' : 'server'), email, token };
 }
 
 // As variáveis JIRA_* têm prioridade sobre o arquivo (útil em CI)
 export function loadSite(url) {
-  const fromEnv = envSite(url);
+  const fromEnv = envSite();
   if (fromEnv) return fromEnv;
 
   const data = readCredentials();
