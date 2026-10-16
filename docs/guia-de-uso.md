@@ -1,30 +1,29 @@
-# Guia de uso
+# 📘 Guia de uso
 
-Este guia é para quem vai usar o `jira-commit` no dia a dia. Para a lista completa de
-opções do `.jira-commit.json`, veja [configuracao.md](configuracao.md).
+Tudo o que você precisa para usar o `jira-commit` no dia a dia. Para a lista completa de
+opções do `.jira-commit.json`, veja a [referência de configuração](configuracao.md).
 
-- [1. O que a CLI faz](#1-o-que-a-cli-faz)
-- [2. Pré-requisitos](#2-pré-requisitos)
-- [3. Instalação](#3-instalação)
-- [4. Login (uma vez por máquina)](#4-login-uma-vez-por-máquina)
-- [5. Configurar o repositório (uma vez por repo)](#5-configurar-o-repositório-uma-vez-por-repo)
-- [6. Questionário do commit (tipo, escopo e descrição)](#6-questionário-do-commit-tipo-escopo-e-descrição)
-- [7. O dia a dia: commitando](#7-o-dia-a-dia-commitando)
-- [8. Criar atividade a partir do commit](#8-criar-atividade-a-partir-do-commit)
-- [9. Sugestão de título por IA](#9-sugestão-de-título-por-ia)
-- [10. Fora do commit: listar e comentar](#10-fora-do-commit-listar-e-comentar)
-- [11. Quando o hook não aparece (ou não deveria aparecer)](#11-quando-o-hook-não-aparece-ou-não-deveria-aparecer)
-- [12. Problemas comuns](#12-problemas-comuns)
-- [13. Perguntas frequentes](#13-perguntas-frequentes)
+| Parte | Seções |
+| --- | --- |
+| **🚀 Começar** | [1. O que a CLI faz](#1-o-que-a-cli-faz) · [2. Pré-requisitos](#2-pré-requisitos) · [3. Instalação](#3-instalação) · [4. Login](#4-login) · [5. Configurar o repositório](#5-configurar-o-repositório) |
+| **⌨️ Dia a dia** | [6. Commitando](#6-commitando) · [7. Questionário do commit](#7-questionário-do-commit) · [8. Menu de atividades](#8-menu-de-atividades) · [9. Criar atividade](#9-criar-atividade) · [10. Comentar e listar](#10-comentar-e-listar) |
+| **✨ Recursos** | [11. Sugestões por IA](#11-sugestões-por-ia) · [12. Idioma](#12-idioma) · [13. Atalhos e automações](#13-atalhos-e-automações) |
+| **🩺 Ajuda** | [14. Quando o menu não aparece](#14-quando-o-menu-não-aparece) · [15. Problemas comuns](#15-problemas-comuns) · [16. Perguntas frequentes](#16-perguntas-frequentes) |
 
 ---
 
+# 🚀 Começar
+
+> [!TIP]
+> **Em resumo:** instale a CLI no projeto, rode `login` uma vez por máquina e `init` uma vez por
+> repositório. Depois disso, é só commitar pelo terminal.
+
 ## 1. O que a CLI faz
 
-Na hora do `git commit`, o `jira-commit` faz duas coisas:
+Na hora do `git commit`, o `jira-commit`:
 
 1. **Monta a mensagem**, se ela ainda não existe: pergunta tipo, escopo e descrição, com os
-   tipos e escopos do projeto ([seção 6](#6-questionário-do-commit-tipo-escopo-e-descrição)).
+   tipos e escopos do projeto.
 2. **Liga o commit a uma atividade do Jira**: mostra as suas atividades num menu e coloca a
    chave escolhida na mensagem.
 
@@ -34,183 +33,208 @@ feat(home): adiciona card de benefício
 feat(home): LOJA-2411 adiciona card de benefício
 ```
 
-Se a atividade ainda não existe, dá para **criar na hora**, inclusive como **subtarefa**
-de uma tarefa existente. Ela já sai com título, descrição, responsável e status.
+Se a atividade ainda não existe, você **cria na hora**, inclusive como **subtarefa**. Ela já
+sai com título, descrição, responsável, sprint e status. Também dá para **comentar** na
+atividade sem abrir o Jira.
 
-O hook só mexe na mensagem do commit. Ele não faz push, não muda o status de atividades
-existentes e não comenta no Jira.
+> [!NOTE]
+> O `jira-commit` não faz push e só muda o status de uma atividade quando você **cria** uma e
+> escolhe o status inicial.
 
 ## 2. Pré-requisitos
 
-| Item | Detalhe |
-|---|---|
-| Node.js | 22 ou mais novo (`node -v`) |
-| Git | Qualquer versão recente. No Windows, use o **Git Bash** ou o terminal integrado do VS Code |
-| Jira | **Cloud** (`*.atlassian.net`) ou **Server / Data Center** (8.4 ou mais novo), com acesso ao projeto |
-| Token | Cloud: API token, gerado em <https://id.atlassian.com/manage-profile/security/api-tokens>. Server/DC: token pessoal (PAT), criado no seu perfil do Jira |
+| | |
+| --- | --- |
+| **Node.js** | 22 ou mais novo. Confira com `node -v` |
+| **Git** | Qualquer versão recente. No Windows funciona no Git Bash, no PowerShell e no terminal do VS Code |
+| **Jira** | **Cloud** (`*.atlassian.net`) ou **Server / Data Center** 8.4+, com acesso ao projeto |
+| **Token** | **Cloud:** API token, gerado em [id.atlassian.com](https://id.atlassian.com/manage-profile/security/api-tokens). **Server/DC:** token pessoal (PAT), criado no seu perfil do Jira |
 
 ## 3. Instalação
 
-A CLI é **interna** e não é publicada no npm. Ela é instalada direto do repositório git.
+A CLI é **interna**: não é publicada no npm e é instalada direto do repositório git. Escolha
+um dos jeitos abaixo.
 
-No repositório onde você vai commitar:
+### No projeto (recomendado)
 
 ```bash
 npm i -D git+https://github.com/alwspiderc/jira-commit-cli.git
 ```
 
-- O repositório é privado. Você precisa ter acesso a ele no GitHub, e o git da sua máquina
-  precisa estar autenticado: se `git clone` desse endereço funciona, a instalação também
-  funciona.
-- Para fixar uma versão, adicione a tag no fim: `...jira-commit-cli.git#v0.1.0`. Sem tag,
-  o npm instala o que estiver na branch principal no momento.
-- Para atualizar depois: `npm update jira-commit-cli`, ou reinstale com a tag nova.
-- **CI:** com `-D`, o pacote entra no `package.json`, e o `npm ci` do CI também precisa de
-  acesso ao repositório privado (ex.: um token no GitHub Actions). Sem isso, o build quebra.
-  Se o CI não tiver acesso, cada pessoa instala com `--no-save` (abaixo), sem mexer no
-  `package.json`.
+A CLI entra no `package.json`, e qualquer pessoa que rodar `npm install` fica com ela.
 
-> **Sempre use `npx --no-install jira-commit`.** Existe um pacote público **diferente**
-> chamado `jira-commit` no npm. Sem o `--no-install`, se a CLI não estiver instalada no
-> projeto, o npx oferece baixar esse outro pacote, que pediria as suas credenciais do Jira.
+- **Acesso:** o repositório é privado. Se `git clone` desse endereço funciona na sua máquina,
+  a instalação também funciona.
+- **Versão fixa:** acrescente a tag no fim (`...jira-commit-cli.git#v0.1.0`). Sem tag, o npm
+  instala o que estiver na branch principal.
+- **Atualizar:** `npm update jira-commit-cli`, ou reinstale com a tag nova.
+- **CI:** o `npm ci` do CI também precisa de acesso ao repositório (ex.: um token no GitHub
+  Actions). Se o CI não tiver acesso, use a instalação só na sua máquina, abaixo.
 
-**Sem mexer no `package.json`** (cópia local, ou do git, só na sua máquina):
+### Só na sua máquina, sem mexer no `package.json`
 
 ```bash
-npm i --no-save ../caminho/para/jira-commit-cli                    # pasta local
 npm i --no-save git+https://github.com/alwspiderc/jira-commit-cli.git   # do git
+npm i --no-save ../caminho/para/jira-commit-cli                          # de uma pasta local
 ```
 
-O `--no-save` não mexe no `package.json` nem no lock, mas o próximo `npm install` remove o
-pacote, e aí o menu some do commit até você instalar de novo. Para evitar isso, o `init` oferece
-adicionar a CLI ao `package.json` ([seção 5](#5-configurar-o-repositório-uma-vez-por-repo)). Com a pasta local, o pacote é um link,
-então qualquer mudança no código da CLI vale na hora.
+O próximo `npm install` remove o pacote, e aí o menu some do commit até você instalar de
+novo. O `init` oferece pôr a CLI no `package.json` para evitar isso.
 
-**Projetos sem Node** (Python, Java, Go, …) ou **para usar em todos os seus repositórios**:
-instale uma vez, de forma global. A máquina precisa ter Node; o projeto, não.
+### Global: para projetos sem Node ou para todos os seus repositórios
 
 ```bash
 npm i -g git+https://github.com/alwspiderc/jira-commit-cli.git
-jira-commit init      # sem o npx: o comando fica disponível em qualquer pasta
+jira-commit init      # o comando fica disponível em qualquer pasta, sem o npx
 ```
 
-O hook procura primeiro a CLI do projeto (`node_modules`) e depois a global.
+A máquina precisa ter Node; o projeto (Python, Java, Go…) não. O hook procura primeiro a CLI
+do projeto e depois a global.
 
-Confira se o binário ficou disponível:
+> [!WARNING]
+> **Sempre use `npx --no-install jira-commit`** (com a instalação no projeto). Existe um pacote
+> público **diferente** chamado `jira-commit` no npm. Sem o `--no-install`, o npx ofereceria
+> baixar esse outro pacote, que pediria as suas credenciais do Jira.
 
-```bash
-npx --no-install jira-commit
-```
+Confira se deu certo: `npx --no-install jira-commit` deve mostrar a ajuda com os comandos.
 
-Deve aparecer a ajuda com os comandos `login`, `init` e `list`.
+## 4. Login
 
-## 4. Login (uma vez por máquina)
+Uma vez por máquina:
 
 ```bash
 npx --no-install jira-commit login
 ```
 
-O `login` descobre sozinho se o Jira é Cloud ou Server/Data Center e pede as credenciais certas:
+O `login` descobre sozinho se o Jira é Cloud ou Server e pede as credenciais certas:
 
 | Pergunta | Jira Cloud | Jira Server / Data Center |
-|---|---|---|
+| --- | --- | --- |
 | URL do Jira | `https://suaempresa.atlassian.net` | `https://jira.suaempresa.com.br` |
 | E-mail | `voce@empresa.com` | *(não pergunta)* |
-| Token (fica mascarado) | API token do passo 2 | Token pessoal (PAT): no Jira, seu perfil → **Tokens de acesso pessoal** |
+| Token (fica mascarado) | API token | Token pessoal: seu perfil → **Tokens de acesso pessoal** |
 
-No fim ele testa a conexão e mostra `✔ Conectado como <seu nome>`. Só então o token é salvo.
+Ele testa a conexão e mostra `✔ Conectado como <seu nome>`. **Só então** o token é salvo.
 
-**Mais de um Jira** (ex.: um para cada cliente): rode o `login` de novo para cada um. O token
-só é salvo depois que a conexão funciona. O primeiro Jira vira o padrão, e cada repositório
-aponta para o seu pelo campo `jiraUrl` do `.jira-commit.json`, que o `init` preenche.
+**Mais de um Jira** (ex.: um por cliente): rode o `login` de novo para cada um. O primeiro
+vira o padrão, e cada repositório aponta para o seu pelo campo `jiraUrl`, que o `init` preenche.
 
-As credenciais ficam em `~/.config/jira-commit/credentials.json`. Também dá para usar as
-variáveis `JIRA_BASE_URL`, `JIRA_EMAIL` e `JIRA_API_TOKEN`, que têm prioridade sobre o
-arquivo.
+> [!CAUTION]
+> As credenciais ficam em `~/.config/jira-commit/credentials.json`, em texto puro. No Linux e
+> no macOS o arquivo é legível só pelo seu usuário. No Windows, fica protegido só pela pasta do
+> seu perfil. **Nunca commite esse arquivo.**
 
-> **Segurança:** o arquivo guarda o token em texto puro. No Linux e no macOS ele é criado com
-> permissão `600`, legível só pelo seu usuário. No Windows essa permissão não tem efeito, e o
-> arquivo fica protegido só pela pasta do seu perfil. Nunca commite esse arquivo.
+## 5. Configurar o repositório
 
-## 5. Configurar o repositório (uma vez por repo)
+Uma vez por repositório:
 
 ```bash
 npx --no-install jira-commit init
 ```
 
-O `init` pode ser rodado de novo sem problema: ele só pergunta o que ainda falta.
+Pode rodar de novo quando quiser: ele só pergunta o que ainda falta. Em ordem, o `init`:
 
-**a) Cria o `.jira-commit.json`** (se ainda não existir), perguntando:
+### a) Cria o `.jira-commit.json`
 
 | Pergunta | O que responder |
-|---|---|
+| --- | --- |
 | Chave do projeto | O prefixo das atividades. Ex.: `LOJA` para `LOJA-2410` |
-| Tipo das tarefas criadas (sem pai) | Escolha na lista, que vem do seu Jira. Ex.: `Mobile` |
-| Prefixo do título | Padrão `{product} \| <Tipo>: `. Veja a [seção 8](#prefixo-do-título) |
+| Qual Jira | Só aparece se você fez login em mais de um |
+| Tipo das tarefas criadas sem pai | Escolha na lista, que vem do seu Jira. Ex.: `Mobile` |
+| Prefixo do título | Padrão `{product} \| <Tipo>: ` ([veja como funciona](#prefixo-do-título)) |
 | Formato da mensagem | Em projetos com commitlint, aceite `{prefix}{key} {subject}` |
 
-**Commite o `.jira-commit.json`.** Ele é a configuração do time para aquele repositório.
+**Commite esse arquivo**: ele é a configuração do time para o repositório.
 
-**b) Configura o questionário do commit** (a seção `commit` do `.jira-commit.json`):
-- se o projeto tem um **`.cz-config.js`**, oferece importar os tipos, os escopos e o
-  limite de caracteres dele;
-- senão, oferece os tipos padrão da CLI (os do Conventional Commits mais `patch`, `wip` e
+### b) Liga o questionário do commit
+
+- Se o projeto tem um **`.cz-config.js`**, oferece importar os tipos, os escopos e o limite de
+  caracteres dele.
+- Senão, oferece os **tipos padrão da CLI** (os do Conventional Commits mais `patch`, `wip` e
   `merge`), sem escopos.
+- Se você recusar, ele grava `"commit": false` e não pergunta de novo.
 
-Se você recusar, o `init` grava `"commit": false` e não pergunta de novo. Detalhes na
-[seção 6](#6-questionário-do-commit-tipo-escopo-e-descrição).
+### c) Prepara o projeto para o time
 
-**c) Prepara o projeto para o time** (só em projetos com `package.json`). Cada item é
-perguntado antes e só aparece se estiver faltando:
-- **jira-commit no `package.json`** (devDependency, instalada pelo git): quem rodar
-  `npm install` já fica com a CLI, e o commit não falha por falta dela;
-- **Husky**: instala o pacote, cria o script `"prepare": "husky"` (ou acrescenta `&& husky` a
-  um `prepare` que já existe) e roda o `husky` para ativar a pasta `.husky/`. Ele **não** roda
-  o `husky init`, que criaria um `pre-commit` com `npm test`;
-- o gerenciador é detectado pelo lock: `pnpm-lock.yaml` → pnpm, `yarn.lock` → yarn, senão npm;
-- se a instalação falhar (sem rede, sem acesso ao GitHub), o `init` avisa, mostra o comando
-  para rodar à mão e segue;
-- projetos com o **Husky 4** (configurado dentro do `package.json`) não são alterados.
+Só em projetos com `package.json`. Cada item é perguntado antes e só aparece se estiver faltando:
 
-Depois, **commite o `package.json`, o lock e a pasta `.husky`**. Assim, um colega só precisa de
-`git pull` e `npm install`: o script `prepare` ativa o hook sozinho.
+| Item | Por quê |
+| --- | --- |
+| **jira-commit no `package.json`** | Quem rodar `npm install` já fica com a CLI |
+| **Husky** | O hook vai para o repositório (`.husky/`) e vale para todo mundo. O script `"prepare": "husky"` ativa o hook a cada `npm install` |
 
-**d) Instala o hook** `prepare-commit-msg`:
-- se o projeto usa **Husky** (tem a pasta `.husky/`), a linha é adicionada em
-  `.husky/prepare-commit-msg`, que vai para o repositório;
-- num projeto **sem `package.json`**, oferece a pasta `.githooks/` (versionada) e ativa com
-  `git config core.hooksPath .githooks`. Como essa configuração é local, cada pessoa do time
-  roda o `init` uma vez;
-- senão, vai para `.git/hooks/prepare-commit-msg`, que **não** é versionado: vale só na sua
-  máquina;
-- um hook de versão antiga (com `npx`) é atualizado para o bloco novo;
-- se já existir um hook, a linha do jira-commit é **acrescentada no final**, sem apagar
-  nada. Rodar o `init` de novo não duplica a linha;
-- se o hook tiver o **commitizen** (`npx cz --hook` ou `git cz --hook`) e o questionário
-  estiver ligado, oferece tirar o cz, para as perguntas não aparecerem duas vezes.
+O gerenciador é detectado pelo lock (`pnpm-lock.yaml` → pnpm, `yarn.lock` → yarn, senão npm). Se
+a instalação falhar, o `init` mostra o comando para rodar à mão e segue.
 
-**e) Cria o script `npm run commit`** (`git commit --no-edit`), que faz as perguntas e
-commita sem abrir o editor do git no fim. Se já existir um script `commit` (ex.: `git-cz`),
-pergunta antes de trocar.
+> [!NOTE]
+> O `init` **não** roda o `husky init`, que criaria um `pre-commit` com `npm test`. Projetos com
+> o Husky 4 (configurado dentro do `package.json`) não são alterados.
 
-### Idioma
+### d) Instala o hook
 
-A CLI fala **português** e **inglês**: menus, mensagens, erros, o `--help` e as sugestões da
-IA. O idioma vem, nesta ordem:
+| Projeto | Onde fica o hook | Vale para o time? |
+| --- | --- | --- |
+| Com Husky | `.husky/prepare-commit-msg` | ✔ Sim |
+| Sem `package.json` | `.githooks/` + `git config core.hooksPath .githooks` (o `init` oferece) | ✔ Sim, depois que cada pessoa roda o `init` uma vez |
+| Outros casos | `.git/hooks/prepare-commit-msg` | ✖ Só na sua máquina |
 
-1. do campo `"language"` do `.jira-commit.json` (`"pt"` ou `"en"`), que vale para o time;
-2. da variável `JIRA_COMMIT_LANG` (`pt` ou `en`), que vale para você;
-3. do idioma do sistema: português se ele for `pt-*`; inglês nos outros casos.
+- Se o hook já existe, a linha do jira-commit é **acrescentada no fim**, sem apagar nada.
+  Rodar o `init` de novo não duplica a linha, e um hook de versão antiga é atualizado.
+- Se o hook tem o **commitizen** (`cz --hook`), o `init` oferece tirá-lo, para as perguntas
+  não aparecerem duas vezes.
 
-## 6. Questionário do commit (tipo, escopo e descrição)
+### e) Cria o `npm run commit`
 
-Com a seção `commit` no `.jira-commit.json`, um commit sem mensagem (`npm run commit` ou
-`git commit` sem `-m`) começa por três perguntas:
+O script `git commit --no-edit` faz as perguntas e commita **sem abrir o editor** no fim. Se já
+existir um script `commit` (ex.: `git-cz`), o `init` pergunta antes de trocar.
+
+Depois do `init`, **commite** o `.jira-commit.json`, o `package.json`, o lock e a pasta `.husky`
+(ou `.githooks`).
+
+---
+
+# ⌨️ Dia a dia
+
+> [!TIP]
+> **Em resumo:** `git add`, `npm run commit`, responda tipo, escopo e descrição, e escolha a
+> atividade. Digite para buscar, **Esc** para voltar, **Ctrl+C** para desistir.
+
+## 6. Commitando
+
+Sempre **pelo terminal**:
+
+```bash
+git add .
+npm run commit                       # questionário completo, sem editor no fim
+git commit                           # questionário completo, abre o editor no fim
+git commit -m "feat(home): ..."      # pula o questionário, vai direto ao menu
+```
+
+O commit passa por três etapas:
+
+```mermaid
+flowchart LR
+    A["git commit"] --> B["Questionário<br/>tipo · escopo · descrição"]
+    B --> C["Menu de atividades<br/>escolher · criar · digitar · pular"]
+    C --> D["Mensagem com a chave<br/>+ cartão de resumo"]
+```
+
+### Teclas
+
+| Tecla | Onde | O que faz |
+| --- | --- | --- |
+| `↑` `↓` | Listas | Navega. A lista para no fim, sem dar a volta |
+| `Enter` | Qualquer pergunta | Escolhe ou confirma |
+| *digitar* | Listas com busca | Filtra a lista (sem ligar para acento ou maiúscula) |
+| `Esc` | Qualquer pergunta | **Volta ao passo anterior**, mantendo o que já foi respondido |
+| `Ctrl+C` | Qualquer pergunta | Cancela o commit. Nada é commitado, e o stage fica como estava |
+| `\|` | Corpo e comentário | Quebra linha ou parágrafo |
+
+## 7. Questionário do commit
+
+Num commit sem mensagem (`npm run commit` ou `git commit` sem `-m`), a CLI pergunta:
 
 ```text
-◆ jira-commit  LOJA · develop
-│ (mensagem vazia)
-
 ◆ Tipo · digite para filtrar fe
 ❯ feat      Uma nova funcionalidade
 ◆ Escopo · digite para filtrar sign
@@ -220,27 +244,20 @@ Com a seção `commit` no `.jira-commit.json`, um commit sem mensagem (`npm run 
 cria a tela de confirmação de e-mail
 ```
 
-- **Tipo e escopo:** digite parte do nome para filtrar (sem se preocupar com acento ou
-  maiúscula) e aperte Enter. As setas também funcionam. O escopo tem a opção
-  "— sem escopo" no fim da lista e só aparece se o projeto tiver escopos.
-- **Descrição:** o que vem depois de `tipo(escopo):`. O limite de tamanho já desconta o
-  espaço da chave do Jira, então o commitlint não reclama depois. Com IA ligada, ela já
-  vem preenchida ([seção 9](#9-sugestão-de-título-por-ia)).
-- **Corpo e BREAKING CHANGE** não são perguntados em todo commit. Quando precisar, use a
-  ação **¶ Adicionar corpo / BREAKING CHANGE** no menu de atividades
-  ([seção 7](#7-o-dia-a-dia-commitando)).
+| Pergunta | Detalhes |
+| --- | --- |
+| **Tipo** | Cada tipo tem a sua cor. Digite parte do nome ou da descrição para filtrar |
+| **Escopo** | Só aparece se o projeto tiver escopos. Tem a opção "— sem escopo" |
+| **Descrição** | O que vem depois de `tipo(escopo):`. O limite de tamanho já desconta o espaço da chave do Jira. Com a IA ligada, já vem preenchida |
 
-Depois disso vem o menu de atividades, e a chave entra no lugar certo:
+Corpo e BREAKING CHANGE **não** são perguntados em todo commit: quando precisar, use a ação
+**¶ Adicionar corpo / BREAKING CHANGE** no menu de atividades.
+
+O resultado:
 
 ```text
 feat(sign-up): LOJA-2410 cria a tela de confirmação de e-mail
 ```
-
-**Sem editor no fim:** com `git commit`, o git abre o editor depois das perguntas, para
-você revisar a mensagem. Com `npm run commit`, o commit sai direto.
-
-**Com `-m`:** `git commit -m "feat(home): ..."` pula as perguntas e vai direto ao menu de
-atividades.
 
 ### Commitlint com a mesma lista
 
@@ -248,7 +265,6 @@ Para os tipos e escopos ficarem num lugar só, faça o `commitlint.config.cjs` l
 `.jira-commit.json`:
 
 ```js
-// Tipos e escopos vêm do .jira-commit.json: a mesma lista que o jira-commit mostra no commit
 const { commit } = require('./.jira-commit.json');
 
 module.exports = {
@@ -262,35 +278,28 @@ module.exports = {
 };
 ```
 
-> O `subject-case` precisa ficar desligado: com `"format": "{prefix}{key} {subject}"` a
-> descrição começa com `LOJA-12`, e a regra padrão do config-conventional rejeita isso.
+> [!IMPORTANT]
+>
+> - O `subject-case` precisa ficar **desligado**: a descrição começa com `LOJA-12`, e a regra
+>   padrão rejeita isso.
+> - Use `"format": "{prefix}{key} {subject}"`. Com `{key}: {message}` a mensagem começaria pela
+>   chave, e o commitlint exige que ela comece pelo tipo.
+> - Os tipos `patch`, `wip` e `merge` só passam no commitlint com o `type-enum` acima.
 
 ### Vindo do commitizen
 
-O `init` faz a migração: importa os tipos e escopos do `.cz-config.js`, tira o
-`cz --hook` do hook e troca o script `commit`. Depois de conferir que está tudo certo, dá
-para apagar o `.cz-config.js`, o bloco `config.commitizen` do `package.json` e os pacotes
+O `init` faz a migração: importa os tipos e escopos do `.cz-config.js`, tira o `cz --hook` do
+hook e troca o script `commit`. Depois de conferir que está tudo certo, dá para apagar o
+`.cz-config.js`, o bloco `config.commitizen` do `package.json` e os pacotes
 (`npm uninstall commitizen cz-customizable`).
 
-> Com `"format": "{key}: {message}"` a mensagem ficaria `LOJA-2410: feat(home): ...` e o
-> **commitlint rejeitaria**, porque o tipo precisa ser a primeira coisa. Em projetos com
-> commitlint, use `{prefix}{key} {subject}`.
+## 8. Menu de atividades
 
-## 7. O dia a dia: commitando
-
-Faça o commit normalmente, **pelo terminal**:
-
-```bash
-git add .
-npm run commit        # com o questionário: commita sem abrir o editor no fim
-# ou: git commit, ou git commit -m "feat(home): ..."
-```
-
-O menu tem duas partes: **ações** no topo e **atividades** em árvore embaixo.
+O menu tem **ações** no topo e as **suas atividades** em árvore embaixo:
 
 ```text
-◆ jira-commit  LOJA · develop
-│ feat(home): adiciona card de benefício
+◆ jira-commit   LOJA  ⎇ develop
+│ feat(home): adiciona card de benefício  · esc volta ao passo anterior
 
 ◆ Qual atividade é esse commit? · digite para buscar
   + Criar nova atividade
@@ -299,99 +308,101 @@ O menu tem duas partes: **ações** no topo e **atividades** em árvore embaixo.
   ¶ Adicionar corpo / BREAKING CHANGE
   ❝ Comentar na atividade
   ↷ Pular
- ── suas atividades (31) ─────────────────
-❯ LOJA-2375  LOJA DO BAIRRO | Mobile - Benefícios: Criar tela de…  Tarefas pendentes
-  ├─ LOJA-2415  LOJA DO BAIRRO | Mobile: Criar testes E2E com Mae…  Tarefas pendentes
-  └─ LOJA-2413  LOJA DO BAIRRO | Mobile: Exibir os estados de car…  Tarefas pendentes
-  LOJA-2416  LOJA DO BAIRRO | Tema Mobile - Tirar o dark mode do…   Tarefas pendentes
-  LOJA DO BAIRRO | Mobile - Benefícios: Criar tela de benefícios quando cidadão tem mais…  ·  Tarefas pendentes
-  ↑↓ navegar  ·  ⏎ escolher
+── suas atividades (31) ─────────────────
+❯ LOJA-2375  LOJA DO BAIRRO | Mobile - Benefícios: Criar tela de…   ● Em andamento
+  ├─ LOJA-2415  LOJA DO BAIRRO | Mobile: Criar testes E2E com M…   ● Tarefas pendentes
+  └─ LOJA-2413  LOJA DO BAIRRO | Mobile: Exibir os estados de c…   ● Tarefas pendentes
+  LOJA-2416  LOJA DO BAIRRO | Tema Mobile - Tirar o dark mode d…   ● Tarefas pendentes
+
+  LOJA DO BAIRRO | Mobile - Benefícios: Criar tela de benefícios quando…  ·  Em andamento
+  ↑↓ navegar  ·  ⏎ escolher  ·  esc voltar
 ```
 
-Logo abaixo da lista aparecem o **título completo** da atividade destacada (na linha ele é
-cortado) e as teclas de navegação. Enquanto busca no Jira, um spinner mostra o que está
-acontecendo.
+### Como ler a lista
 
-| Elemento | Significado |
-|---|---|
-| `├─` / `└─` | Subtarefa da linha de cima |
-| Linha apagada (cinza) | Tarefa pai que está fora do filtro de status. Aparece só para dar contexto e não dá para selecionar |
-| Status em azul | Categoria "a fazer" |
-| Status em amarelo | Categoria "em andamento" (inclui TESTANDO, PARA CORRIGIR etc.) |
-| Texto antes do `\|` apagado | O produto ("LOJA DO BAIRRO"), para destacar o nome da atividade |
+| O que você vê | Significado |
+| --- | --- |
+| `├─` / `└─` | Subtarefa da tarefa de cima |
+| Linha apagada | Tarefa pai fora do filtro de status: só dá contexto, não dá para escolher |
+| `●` azul | Status "a fazer" |
+| `●` amarelo | Status "em andamento" (inclui TESTANDO, PARA CORRIGIR etc.) |
+| `●` verde | Status concluído |
+| Texto apagado antes do `\|` | O produto ("LOJA DO BAIRRO"), para destacar o nome da atividade |
+| Linha embaixo da lista | O título completo da atividade destacada, que na lista aparece cortado |
 
-**Navegação:** use as setas ↑/↓ e confirme com Enter. A lista **para no fim** e não volta
-para o começo. O cursor começa numa **atividade**, nunca numa ação, então um Enter
-sem querer não cria nada.
+### Onde o cursor começa
 
-**Buscar pelo título:** digite direto no menu. O que você digita procura em dois lugares:
+Sempre numa **atividade**, nunca numa ação (um Enter sem querer não cria nada):
+
+1. na atividade com a **chave da branch** (ex.: `feature/LOJA-2410-header`), cuja família vai
+   para o topo;
+2. senão, na **última atividade usada nesta branch** (marcada com **★ última usada**);
+3. senão, na primeira da lista.
+
+### Quais atividades aparecem
+
+Por padrão, só as **suas** (`assignee = você`), nos status do campo `statuses`. Para ver as
+outras, use **⋯ Ver outros status**, e para voltar, **← Voltar aos status padrão** (ou Esc).
+
+### Buscar pelo título
+
+Digite direto no menu. A busca acontece em dois lugares:
 
 ```text
 ◆ Qual atividade é esse commit? · digite para buscar login
- ── suas atividades (1) ─────────────────
-❯ LOJA-2371  LOJA DO BAIRRO | Mobile - Tela de Login: Revisar fluxo…  Em andamento
- ── outras no projeto (6) ───────────────
-  LOJA-1801  Mobile - Login | Criar fluxo de Login, incluindo trata…  Tarefas pendentes
-  ...
- ── ações ───────────────────────────────
+── suas atividades (1) ──────────────────
+❯ LOJA-2371  LOJA DO BAIRRO | Mobile - Tela de Login: Revisar f…   ● Em andamento
+── outras no projeto (6) ────────────────
+  LOJA-1801  Mobile - Login | Criar fluxo de Login, incluindo tr…   ● Tarefas pendentes
+── ações ────────────────────────────────
   + Criar nova atividade
-  ...
 ```
 
-- **Suas atividades:** as da lista são filtradas na hora, a cada tecla. Vale qualquer parte
-  do título ou da chave, sem ligar para acento ou maiúscula. Várias palavras precisam
-  aparecer todas (`card benef` acha "Criar o componente de card de benefício").
-- **Outras no projeto:** quando você para de digitar, a CLI também busca no Jira, no projeto
-  inteiro, as atividades **abertas** com essas palavras no título, de qualquer responsável e
-  em qualquer status. Elas aparecem embaixo quando a busca termina ("buscando no projeto…"
-  enquanto isso). Um número sozinho (`2375`) ou a chave (`LOJA-2375`) acha a atividade
-  direto, mesmo concluída.
-  Pontuação separa palavras: `README.md` procura "README" e "md", e `jira-commit-cli`
-  procura "jira", "commit" e "cli". Se o Jira não responder, aparece "não consegui buscar no
-  projeto", e as suas atividades continuam filtradas normalmente.
-- As **ações** ficam no fim da lista. Sem resultado, o cursor cai em **+ Criar nova
-  atividade**. Para voltar ao menu completo, apague o que digitou.
+| Grupo | Como funciona |
+| --- | --- |
+| **Suas atividades** | Filtradas **na hora**, a cada tecla. Vale qualquer parte do título ou da chave. Com várias palavras, todas precisam aparecer (`card benef` acha "Criar o componente de card de benefício") |
+| **Outras no projeto** | Quando você para de digitar, a CLI busca no Jira as atividades **abertas** do projeto inteiro, de qualquer pessoa. Um número (`2375`) ou a chave acha a atividade direto, mesmo concluída |
 
-> Na busca do projeto, o Jira **considera os acentos**: `benef` e `benefício` acham,
-> `beneficio` não. Na dúvida, digite só o começo da palavra.
+> [!NOTE]
+> Na busca do projeto, quem procura é o Jira, e ele **considera os acentos**: `benef` e
+> `benefício` acham, `beneficio` não. Na dúvida, digite só o começo da palavra. A pontuação
+> separa palavras: `README.md` procura "README" e "md".
 
-**Quais atividades aparecem:** por padrão, só as **suas** (`assignee = você`) nos status
-configurados em `statuses`, por exemplo Em andamento, PARA CORRIGIR e Tarefas pendentes.
-Para ver as outras, escolha **⋯ Ver outros status**, e para voltar, **← Voltar aos
-status padrão**.
-
-**Branch com chave:** se a branch tiver uma chave no nome (ex.:
-`feature/LOJA-2410-header`), a família daquela atividade vai para o topo e o cursor
-começa nela.
-
-**Última atividade usada:** sem chave na branch, o cursor começa na atividade do último
-commit **nesta branch** (marcada com ★ última usada embaixo da lista), já que commits
-seguidos costumam ser da mesma atividade. Se ela saiu da lista (mudou de status, por
-exemplo), aparece no topo das atividades. Sem histórico, o cursor começa na primeira.
-
-**Ações:**
+### Ações
 
 | Ação | O que acontece |
-|---|---|
-| + Criar nova atividade | Cria no Jira e já vincula ao commit ([seção 8](#8-criar-atividade-a-partir-do-commit)) |
-| ⋯ Ver outros status | Mostra todas as suas atividades abertas |
-| ✎ Digitar a chave | Para uma atividade que não é sua ou não aparece na lista. A CLI confere se a chave existe no Jira |
-| ¶ Adicionar corpo / BREAKING CHANGE | Pergunta o corpo do commit (use `\|` para quebrar linha) e o BREAKING CHANGE, os dois opcionais, e volta para o menu. Depois de preenchido, vira "¶ Editar…" |
-| ❝ Comentar na atividade | Pergunta um comentário (use `\|` para quebrar parágrafo) e volta para o menu. Ele é publicado na atividade que você escolher, digitar ou criar em seguida. Se falhar, só avisa: o commit segue. Depois de preenchido, vira "❝ Editar comentário…" |
-| ↷ Pular | Commita sem chave (o commitlint/cz do projeto pode reclamar) |
+| --- | --- |
+| **+ Criar nova atividade** | Cria no Jira e já vincula ao commit ([seção 9](#9-criar-atividade)) |
+| **⋯ Ver outros status** | Mostra todas as suas atividades abertas |
+| **✎ Digitar a chave** | Para uma atividade que não é sua ou não está na lista. A CLI confere se ela existe |
+| **¶ Adicionar corpo / BREAKING CHANGE** | Pergunta o corpo do commit e o BREAKING CHANGE (os dois opcionais) e volta ao menu |
+| **❝ Comentar na atividade** | Escreve um comentário que é publicado na atividade que você escolher em seguida. Se falhar, só avisa |
+| **↷ Pular** | Commita sem chave do Jira |
 
-**Voltar com Esc:** em qualquer pergunta, **Esc** volta ao passo anterior, e o que você já
-respondeu continua preenchido. No menu de atividades, o Esc volta para a descrição do commit
-(ou, em "todos os status", para os status padrão). Durante a criação de uma atividade, o Esc
-volta uma pergunta por vez (confirmação → story points → título → épico ou pai → tipo) até o menu. Responder "não" na
-confirmação também volta para o menu. Depois que a atividade é criada no Jira não há volta: o
-status inicial já é sobre a atividade criada.
+### O resultado
 
-## 8. Criar atividade a partir do commit
+No fim aparece um cartão com o que aconteceu e o link da atividade:
 
-Escolha **+ Criar nova atividade**.
+```text
+╭─ ✔ Commit vinculado ───────────────────────────────╮
+│  LOJA-2410   Tela de login                          │
+│                                                     │
+│ fix(login): LOJA-2410 corrige foco do campo         │
+│ ↗ https://suaempresa.atlassian.net/browse/LOJA-2410 │
+╰─────────────────────────────────────────────────────╯
+```
 
-**1. Tipo**
+## 9. Criar atividade
+
+Escolha **+ Criar nova atividade** no menu. São até seis perguntas, e o **Esc** volta uma de
+cada vez:
+
+```mermaid
+flowchart LR
+    T["1 · Tipo"] --> P["2 · Tarefa pai<br/>ou épico"] --> N["3 · Título"] --> S["4 · Story points"] --> C["5 · Confirmação"] --> E["6 · Status inicial"]
+```
+
+### 1. Tipo
 
 ```text
 ◆ Que tipo de atividade?
@@ -400,234 +411,238 @@ Escolha **+ Criar nova atividade**.
   Fica embaixo de uma tarefa existente e herda sprint, labels e componentes
 ```
 
-**2. Tarefa pai** (subtarefa) **ou épico** (tarefa)
+### 2. Tarefa pai ou épico
+
+**Subtarefa** → escolha a tarefa pai. A **última tarefa pai usada neste repositório** já vem
+selecionada:
 
 ```text
 ◆ Subtarefa de qual tarefa?
   ✎ Digitar a chave da tarefa pai
- ── tarefas (12) ─────────────────────────
+── tarefas (12) ─────────────────────────
 ❯ LOJA-2375  LOJA DO BAIRRO | Mobile - Benefícios: ...  ★ última usada
   LOJA-2373  LOJA DO BAIRRO | Mobile - Tela Inicial: ...
 ```
 
-A **última tarefa pai usada neste repositório** já vem selecionada. Isso ajuda quando você
-cria várias subtarefas seguidas da mesma tarefa.
-
-Para uma tarefa, a pergunta é o **épico** (o "Pai" no Jira web), com busca por digitação:
+**Tarefa** → escolha o épico, com busca por digitação. A sugestão é o último épico usado neste
+repositório (ou, na primeira vez, o que mais aparece nas suas atividades):
 
 ```text
 ◆ Épico da tarefa · digite para buscar
   — sem épico
- ── épicos abertos (59) ─────────────────
-  LOJA-2392  PERMISSÃO
+── épicos abertos (59) ──────────────────
 ❯ LOJA-232   MOBILE  ★ mais usado
-  ...
+  LOJA-2392  PERMISSÃO
 ```
 
-A sugestão é o **último épico usado neste repositório**. Na primeira vez, é o épico que mais
-aparece nas suas atividades. "— sem épico" também fica lembrado. Se o projeto não tiver
-épicos abertos, a pergunta não aparece.
+Se o projeto não tiver épicos abertos, essa pergunta não aparece.
 
-**3. Título**
+### 3. Título
 
-O campo já vem **preenchido e editável**: prefixo + texto do commit (ou a sugestão da IA,
-[seção 9](#9-sugestão-de-título-por-ia)). Ajuste o que quiser e confirme com Enter.
+O campo já vem **preenchido e editável**: prefixo + texto do commit (ou a sugestão da IA). O
+nome sempre começa com **maiúscula** depois do prefixo: `atualiza link` vira
+"LOJA DO BAIRRO | Mobile: Atualiza link".
 
 ```text
 ◆ Título · sugerido pela IA
 LOJA DO BAIRRO | Mobile: Criar card de benefício na Home▌
 ```
 
-O nome da atividade sempre começa com **maiúscula** depois do prefixo, mesmo que o commit
-venha em minúscula ou que você edite em minúscula: `atualiza link` vira
-"LOJA DO BAIRRO | Mobile: Atualiza link".
-
 <a id="prefixo-do-título"></a>
-**Prefixo do título.** Vem do `summaryPrefix`. O `{product}` é substituído pelo trecho do
-título da tarefa pai **antes do ` | `**:
 
-| Tarefa pai | `summaryPrefix` | Prefixo gerado |
-|---|---|---|
-| `LOJA DO BAIRRO \| Mobile - Benefícios: Criar…` | `{product} \| Mobile: ` | `LOJA DO BAIRRO \| Mobile: ` |
-| `Mobile - Login \| Criar fluxo…` | `{product} \| Mobile: ` | `Mobile - Login \| Mobile: ` |
-| `Criar fluxo de login` (sem ` \| `) | `{product} \| Mobile: ` | *(sem prefixo)* |
+> [!NOTE]
+> **Prefixo do título.** Vem do `summaryPrefix`. O `{product}` vira o trecho do título da tarefa
+> pai antes do ` | `:
+>
+> | Tarefa pai | `summaryPrefix` | Prefixo |
+> |---|---|---|
+> | `LOJA DO BAIRRO \| Mobile - Benefícios: Criar…` | `{product} \| Mobile: ` | `LOJA DO BAIRRO \| Mobile: ` |
+> | `Criar fluxo de login` (sem ` \| `) | `{product} \| Mobile: ` | *(sem prefixo)* |
+>
+> Numa **tarefa sem pai**, o `{product}` é o produto que mais aparece nas suas atividades. O
+> separador ` | ` pode ser trocado no campo `productSeparator`.
 
-Para uma **tarefa sem pai**, o `{product}` é o produto que mais aparece nas suas atividades.
+### 4. Story points
 
-**4. Story points** (opcional)
+Opcional: Enter direto deixa sem estimativa. Só aparece se o tipo tiver o campo de estimativa
+na tela de criação do Jira. A escala (padrão 1, 2, 3, 5, 8, 13) vem do `storyPointsScale`, e
+`"storyPoints": false` desliga a pergunta.
 
-```text
-◆ Story points · opcional
-❯ — sem estimativa
-  1
-  2
-  3
-  ...
-```
-
-Vai para o campo de estimativa do Jira ("Story point estimate" ou "Story Points"). Enter
-direto deixa sem estimativa. A pergunta só aparece se o tipo de atividade tiver o campo na
-tela de criação, e some com `"storyPoints": false` no `.jira-commit.json`.
-
-**5. Confirmação**
+### 5. Confirmação
 
 ```text
-◆ Criar Mobile em LOJA no épico LOJA-232 na quadro Sprint 62? (Y/n)
+◆ Criar Mobile em LOJA no épico LOJA-232 na Sprint 62? (Y/n)
 ✔ LOJA-2423 criada no Jira
-✔ LOJA-2423 na quadro Sprint 62
+✔ LOJA-2423 na Sprint 62
 ```
 
-Uma **tarefa sem pai** entra sozinha na **sprint ativa** do quadro do projeto, para aparecer
-no quadro como as criadas pelo Jira web. Uma subtarefa segue a sprint da tarefa pai. Se o
-projeto não tiver sprint ativa (ex.: quadro Kanban), ou se não der para mover, a tarefa fica
-no backlog e o commit segue.
+Responder **"não" volta ao menu**, sem criar nada.
 
-**6. Status inicial**
+### 6. Status inicial
 
 ```text
 ◆ Status de LOJA-2423
 ❯ ● Manter em Tarefas pendentes
   → Em andamento
   → TESTANDO
-  → PARA TECH LEAD
-  ...
 ```
 
-As opções são as transições que o workflow do Jira permite a partir do status inicial.
-Se a mudança de status falhar, a atividade continua criada e o commit segue.
+As opções são as transições que o workflow permite. A partir daqui a atividade **já existe** no
+Jira, então o Esc não volta mais.
 
-**7. Resumo**
-
-No fim aparece um cartão com o que aconteceu e o link para abrir a atividade no Jira:
-
-```text
-╭─ ✔ Atividade criada e vinculada ───────────────────────────────────╮
-│ LOJA-2423  LOJA DO BAIRRO | Mobile: Criar card de benefício na Home │
-│ nova subtarefa de LOJA-2375  ·  3 pts  ·  status Em andamento       │
-│                                                                     │
-│ feat(home): LOJA-2423 adiciona card de benefício                    │
-│ ↗ https://suaempresa.atlassian.net/browse/LOJA-2423                        │
-╰─────────────────────────────────────────────────────────────────────╯
-```
-
-Quando você só escolhe uma atividade existente, o cartão é o **✔ Commit vinculado**, com a
-mensagem final e o link.
-
-**O que vai para o Jira:**
+### O que vai para o Jira
 
 | Campo | Valor |
-|---|---|
-| Título | O que você confirmou no passo 3 |
-| Tipo | Subtarefa (descoberto automaticamente) ou o `issueType` |
-| Pai | A tarefa escolhida (só para subtarefa) |
-| Responsável | Você |
-| Descrição | Corpo do commit (linhas depois da primeira e o que foi preenchido em **¶ Adicionar corpo / BREAKING CHANGE**) + lista **Arquivos alterados** (`git diff --cached --name-status`) |
-| Labels e componentes | Copiados da tarefa pai |
-| Sprint | Tarefa: a sprint ativa do quadro do projeto (sem sprint ativa, fica no backlog). Subtarefa: a da tarefa pai, pelo próprio Jira |
-| Story points | O que você escolheu no passo 4 (ou vazio) |
-| Épico (pai da tarefa) | O que você escolheu no passo 2 (ou nenhum). Subtarefa não tem épico: o pai dela é a tarefa |
+| --- | --- |
+| **Título** | O que você confirmou no passo 3 |
+| **Tipo** | Subtarefa (descoberta automaticamente) ou o `issueType` |
+| **Pai** | A tarefa escolhida (subtarefa) ou o épico (tarefa) |
+| **Responsável** | Você |
+| **Descrição** | Corpo do commit + lista **Arquivos alterados** do stage |
+| **Labels e componentes** | Copiados da tarefa pai |
+| **Sprint** | Tarefa: a sprint ativa do quadro (sem sprint ativa, fica no backlog). Subtarefa: a do pai |
+| **Story points** | O que você escolheu (ou vazio) |
 
-## 9. Sugestão de título por IA
+> [!NOTE]
+> Se mover para a sprint ou mudar o status falhar, a atividade **continua criada** e o commit
+> segue. Só um erro na criação em si cancela o commit.
 
-É **opcional**. Se a variável `ANTHROPIC_API_KEY` (ou `ANTHROPIC_AUTH_TOKEN`) estiver
-definida no ambiente, a IA ajuda em dois lugares.
-
-**Descrição do commit** ([seção 6](#6-questionário-do-commit-tipo-escopo-e-descrição)): o
-pedido sai assim que o commit começa, enquanto você escolhe tipo e escopo. A CLI manda o diff
-do stage, a lista de arquivos e as ~10 últimas descrições do repositório, para a sugestão
-seguir o estilo do time. A descrição chega preenchida e **editável**.
-
-**Título da atividade**, ao criar uma pela CLI:
-
-1. lê o diff do que está no stage (até ~8 mil caracteres), a lista de arquivos, o texto
-   do commit e o título da tarefa pai;
-2. pede um título curto no idioma da CLI: no infinitivo em português (ex.: "Criar card de
-   benefício na Home") ou no imperativo em inglês (ex.: "Add benefit card to home");
-3. coloca a sugestão no campo de título, **editável**.
-
-Sem a chave, ou se a IA falhar ou demorar mais de 8 segundos, o título vem com o texto do
-commit e a descrição vem vazia, como sempre.
-
-```bash
-# Git Bash / Linux / macOS (coloque no ~/.bashrc para ficar permanente)
-export ANTHROPIC_API_KEY="sk-ant-..."
-```
-
-```powershell
-# PowerShell (permanente para o seu usuário)
-[Environment]::SetEnvironmentVariable("ANTHROPIC_API_KEY", "sk-ant-...", "User")
-```
-
-| Configuração | Efeito |
-|---|---|
-| `"ai": false` | Desliga a IA naquele repositório, mesmo com a chave definida |
-| `"aiModel": "claude-haiku-5-5"` | Troca o modelo. O padrão é `claude-opus-5-5` com esforço baixo. O Haiku responde mais rápido e custa menos |
-| `"aiInstructions": "…"` | Orientação extra do projeto, somada às instruções da CLI. Ex.: `"Use os termos do domínio bancário e cite a tela afetada"` |
-| `"language": "en"` | As sugestões (e a CLI) passam a ser em inglês. Veja [Idioma](#idioma) |
-
-> **Privacidade:** com a IA ligada, o diff do commit é enviado para a API da Anthropic.
-> Siga a política da empresa sobre envio de código para serviços externos.
-
-## 10. Fora do commit: listar e comentar
-
-### Listar suas atividades
-
-Para consultar rapidamente:
-
-```bash
-npx --no-install jira-commit list                      # status padrão (statuses)
-npx --no-install jira-commit list --todos              # todas as suas abertas
-npx --no-install jira-commit list --status TESTANDO    # um status específico
-npx --no-install jira-commit list --status "em andamento"
-```
-
-O `--status` aceita o nome como aparece na tela do Jira e não diferencia maiúsculas de
-minúsculas. Se o nome não existir, a CLI mostra os status válidos do projeto.
-
-A saída usa a mesma árvore do menu do commit.
+## 10. Comentar e listar
 
 ### Comentar numa atividade
 
+Junto com o commit, use a ação **❝ Comentar na atividade** do menu. Fora do commit:
+
 ```bash
-npx --no-install jira-commit comment                                  # escolhe a atividade e escreve
+npx --no-install jira-commit comment                                  # escolhe na lista e escreve
 npx --no-install jira-commit comment LOJA-2410                        # só pergunta o texto
 npx --no-install jira-commit comment 2410 "subi o ajuste em develop"  # direto, sem perguntas
 ```
 
-- **Sem chave:** abre a lista das suas atividades, com a mesma busca do menu do commit (digite
-  para filtrar, e o Jira completa com as outras do projeto). O cursor começa na atividade da
-  branch ou na última usada nela.
-- **Chave:** aceita `LOJA-2410` ou só o número, `2410`.
-- **Texto:** sem ele, a CLI pergunta. Use `|` para quebrar parágrafo, como no corpo do commit.
-- **Esc** volta da pergunta do texto para a lista; na lista, cancela.
+- **Chave:** `LOJA-2410` ou só o número, `2410`. Sem chave, abre a lista com a mesma busca do
+  menu do commit.
+- **Texto:** sem ele, a CLI pergunta. Use `|` para quebrar parágrafo.
+- **Esc** volta do texto para a lista; na lista, cancela.
 
-Para comentar junto com um commit, use a ação **❝ Comentar na atividade** do menu
-([seção 7](#7-o-dia-a-dia-commitando)).
-
-## 11. Quando o hook não aparece (ou não deveria aparecer)
-
-| Situação | Comportamento |
-|---|---|
-| A mensagem já tem a chave (ex.: digitada no cz ou com `-m "... LOJA-12 ..."`) | Não faz nada |
-| `git commit --amend`, merge ou squash | Não faz nada |
-| `JIRA_COMMIT_SKIP=1 git commit …` | Não faz nada. Útil em rebase, scripts e CI |
-| Branch com chave (ex.: `feature/LOJA-12-login`) e `"autoLinkBranch": true` | Vincula direto à chave da branch, sem abrir o menu |
-| Commit por **cliente gráfico** (botão de commit do VS Code, GitHub Desktop…) | O hook é **pulado**, porque não há terminal para mostrar o menu |
-| Jira fora do ar ou sem rede | Mostra um aviso e pede a chave manualmente (vazio = pular) |
-| Ctrl+C no menu | **Cancela o commit** (nada é commitado, e o stage fica como estava) |
-| Erro ao criar a atividade no Jira | Mostra o erro e **cancela o commit**. Rode o commit de novo |
-| CLI não instalada (nem no projeto nem global) | O commit **segue sem o menu** e mostra `jira-commit não encontrado`. Instale a CLI ([seção 3](#3-instalação)) |
-
-## 12. Problemas comuns
-
-**Comece pelo `doctor`.** Ele confere tudo de uma vez e diz o que fazer em cada problema:
+### Listar as suas atividades
 
 ```bash
-npx --no-install jira-commit doctor     # ou só jira-commit doctor, com a instalação global
+npx --no-install jira-commit list                        # status padrão (statuses)
+npx --no-install jira-commit list --todos                # todas as suas abertas
+npx --no-install jira-commit list --status "em andamento" # um status, como aparece na tela
+```
+
+O `--status` não diferencia maiúsculas. Se o nome não existir, a CLI mostra os status válidos.
+
+---
+
+# ✨ Recursos
+
+## 11. Sugestões por IA
+
+Opcional. Com a variável `ANTHROPIC_API_KEY` definida, a IA ajuda em dois lugares:
+
+| Onde | O que ela faz |
+| --- | --- |
+| **Descrição do commit** | Lê o diff do stage, a lista de arquivos e as ~10 últimas descrições do repositório, para seguir o estilo do time. O pedido sai assim que o commit começa, enquanto você escolhe tipo e escopo |
+| **Título da atividade** | Lê o diff, os arquivos, o commit e a tarefa pai, e sugere um título curto: no infinitivo em português ("Criar card de benefício na Home") ou no imperativo em inglês ("Add benefit card to home") |
+
+As sugestões chegam **preenchidas e editáveis**. Sem a chave, ou se a IA falhar ou demorar mais
+de 8 segundos, tudo funciona como antes, só sem sugestão.
+
+**Como ligar:**
+
+```bash
+# Git Bash / Linux / macOS (no ~/.bashrc para ficar permanente)
+export ANTHROPIC_API_KEY="sk-ant-..."
+```
+
+```powershell
+# PowerShell (permanente para o seu usuário; abra um terminal novo depois)
+[Environment]::SetEnvironmentVariable("ANTHROPIC_API_KEY", "sk-ant-...", "User")
+```
+
+**Como ajustar** (no `.jira-commit.json`):
+
+| Campo | Efeito |
+| --- | --- |
+| `"ai": false` | Desliga a IA neste repositório, mesmo com a chave definida |
+| `"aiModel": "claude-haiku-5-5"` | Troca o modelo. O padrão é `claude-opus-5-5` com esforço baixo; o Haiku é mais rápido e mais barato |
+| `"aiInstructions": "…"` | Orientação do projeto, somada às instruções da CLI. Ex.: `"Use os termos do domínio bancário"` |
+
+> [!WARNING]
+> **Privacidade:** com a IA ligada, o diff do commit é enviado para a API da Anthropic. Siga a
+> política da empresa sobre envio de código para serviços externos.
+
+## 12. Idioma
+
+A CLI fala **português** e **inglês**: menus, mensagens, erros, a ajuda e as sugestões da IA.
+O idioma é escolhido nesta ordem:
+
+| Prioridade | Fonte | Vale para |
+| --- | --- | --- |
+| 1 | `"language": "pt"` ou `"en"` no `.jira-commit.json` | O time, naquele repositório |
+| 2 | Variável `JIRA_COMMIT_LANG` (`pt` ou `en`) | Você |
+| 3 | Idioma do sistema: `pt-*` → português, o resto → inglês | Você |
+
+```bash
+JIRA_COMMIT_LANG=en npx --no-install jira-commit --help          # Git Bash
+```
+
+```powershell
+$env:JIRA_COMMIT_LANG = "en"; npx --no-install jira-commit --help  # PowerShell
+```
+
+## 13. Atalhos e automações
+
+### Pular o hook uma vez
+
+Útil em rebase, scripts e CI: o hook não pergunta nada nem mexe na mensagem.
+
+```bash
+JIRA_COMMIT_SKIP=1 git commit -m "wip"                                          # Git Bash
+```
+
+```powershell
+$env:JIRA_COMMIT_SKIP = "1"; git commit -m "wip"; Remove-Item Env:JIRA_COMMIT_SKIP  # PowerShell
+```
+
+### Vincular direto pela branch
+
+Com `"autoLinkBranch": true` no `.jira-commit.json` e uma chave no nome da branch (ex.:
+`feature/LOJA-2410-login`), o commit é vinculado direto a ela, **sem abrir o menu**. Sem chave
+na branch, o menu aparece como sempre.
+
+---
+
+# 🩺 Ajuda
+
+## 14. Quando o menu não aparece
+
+Na maioria das vezes, é de propósito:
+
+| Situação | O que acontece |
+| --- | --- |
+| A mensagem já tem a chave (ex.: `-m "... LOJA-12 ..."`) | Nada: ela já está ligada |
+| `git commit --amend`, merge ou squash | Nada |
+| `JIRA_COMMIT_SKIP=1` | Nada |
+| Commit pelo **botão** do editor (VS Code, GitHub Desktop…) | O hook é pulado: não há terminal para o menu |
+| `autoLinkBranch` com chave na branch | Vincula direto, sem menu |
+| CLI não instalada (nem no projeto nem global) | O commit **segue sem o menu** e avisa `jira-commit: CLI não encontrada` |
+| Jira fora do ar ou sem rede | Avisa e pede a chave à mão (vazio = pular) |
+| Erro ao **criar** a atividade | Mostra o erro e **cancela o commit**. Rode o commit de novo |
+
+## 15. Problemas comuns
+
+### Comece pelo `doctor`
+
+```bash
+npx --no-install jira-commit doctor
 ```
 
 ```text
 ✔ Node               v22.12.0
+✔ Repositório git    C:/projetos/app
 ✔ .jira-commit.json  projeto LOJA
 ✔ Login no Jira      https://suaempresa.atlassian.net (Cloud)
 ✖ Conexão            token inválido ou expirado
@@ -635,83 +650,128 @@ npx --no-install jira-commit doctor     # ou só jira-commit doctor, com a insta
 ✔ Hook               .husky/prepare-commit-msg
 ✖ Pasta dos hooks    o Husky não está ativo neste clone
                      → Rode: npm install (o script "prepare" ativa o Husky)
+✔ CLI para o hook    no node_modules do projeto
+
+ ✖ 2 problema(s) para corrigir
 ```
 
-Ele confere: versão do Node, o `.jira-commit.json`, o login e a conexão com o Jira, o projeto e
-o `issueType`, o hook (instalado, atualizado e na pasta certa), se o hook acha a CLI, o Husky e
-a IA. Sai com código 1 quando há algum ✖, então dá para usar em scripts.
+Ele confere o Node, o `.jira-commit.json`, o login, a conexão, o projeto, o hook (instalado,
+atualizado e na pasta certa), se o hook acha a CLI, o Husky e a IA. Sai com código 1 quando
+há algum ✖, então também serve em scripts.
 
-**`jira-commit não encontrado: commit sem o menu do Jira`**
-O hook não achou a CLI nem no projeto nem global. O commit foi feito, mas sem a chave.
-Instale a CLI ([seção 3](#3-instalação)) e, se o hook for de uma versão antiga, rode o `init`
-de novo para atualizá-lo.
+### Mensagens de erro
 
-**`npx canceled due to missing packages` ao commitar**
+<details>
+<summary><b>Credenciais do Jira não encontradas</b></summary>
+
+Rode o `login`. Se você usa variáveis de ambiente, confira se `JIRA_BASE_URL` e
+`JIRA_API_TOKEN` (e `JIRA_EMAIL`, no Cloud) estão definidas.
+</details>
+
+<details>
+<summary><b>Jira respondeu 401</b></summary>
+
+O token expirou ou foi revogado, ou o e-mail está errado. Gere um token novo e rode o `login`.
+</details>
+
+<details>
+<summary><b>Arquivo .jira-commit.json não encontrado</b></summary>
+
+O repositório ainda não foi configurado. Rode o `init`, ou faça `git pull` para pegar o arquivo
+do time.
+</details>
+
+<details>
+<summary><b>.jira-commit.json tem N problema(s)</b></summary>
+
+A CLI aponta cada campo errado, por exemplo `maxResults deve ser número inteiro`. Corrija o
+arquivo. Com o `$schema` que o `init` grava, o editor já sublinha o erro.
+</details>
+
+<details>
+<summary><b>Status "X" não existe em LOJA</b></summary>
+
+Algum nome em `statuses` (ou no `--status`) está diferente do Jira. Copie o nome exatamente
+como aparece na lista do erro.
+</details>
+
+<details>
+<summary><b>jira-commit: CLI não encontrada / not found</b></summary>
+
+O hook não achou a CLI nem no projeto nem global. O commit foi feito, só que sem a chave.
+Instale a CLI ([seção 3](#3-instalação)).
+</details>
+
+<details>
+<summary><b>npx canceled due to missing packages</b></summary>
+
 O hook é de uma versão antiga, que cancelava o commit sem a CLI. Rode o `init` de novo: ele
 troca o hook pelo bloco novo.
+</details>
 
-**`Credenciais do Jira não encontradas. Rode: jira-commit login`**
-Rode o `login`. Se você usa variáveis de ambiente, confira se as três estão definidas.
+<details>
+<summary><b>O commitlint rejeitou a mensagem</b></summary>
 
-**`Jira respondeu 401`**
-O token expirou ou foi revogado, ou o e-mail está errado. Gere um token novo e rode
-o `login` de novo.
+Confira se o `format` é `{prefix}{key} {subject}` e se o `subject-case` está desligado
+([seção 7](#commitlint-com-a-mesma-lista)).
+</details>
 
-**`Arquivo .jira-commit.json não encontrado`**
-O repositório ainda não foi configurado. Rode o `init` ou faça `git pull` para pegar o
-arquivo do time.
+<details>
+<summary><b>Erro ao criar: tipo de issue inválido</b></summary>
 
-**`Status "X" não existe em LOJA. Disponíveis: ...`**
-Algum nome em `statuses` (ou no `--status`) está diferente do Jira. Copie o nome
-exatamente como aparece na lista do erro.
+O `issueType` não existe no projeto. O `doctor` mostra os tipos disponíveis.
+</details>
 
-**O menu não aparece no commit**
-- Você commitou pelo botão do editor? Commite pelo terminal ([seção 11](#11-quando-o-hook-não-aparece-ou-não-deveria-aparecer)).
-- A mensagem já tinha a chave?
-- Rode `npx --no-install jira-commit`. Se der erro, a CLI não está instalada no projeto.
-- Confira se a linha `# jira-commit` existe no `prepare-commit-msg`.
+### Outros sintomas
 
-**Aparecem poucas atividades / falta uma atividade**
-- A lista mostra só as **suas** atividades nos `statuses` configurados. Use
-  **⋯ Ver outros status** ou **✎ Digitar a chave**.
-- O limite é `maxResults` (padrão 20). Aumente no `.jira-commit.json`.
+| Sintoma | O que fazer |
+| --- | --- |
+| **O menu não aparece** | Commitou pelo botão do editor? Use o terminal. Confira também a [seção 14](#14-quando-o-menu-não-aparece) e rode o `doctor` |
+| **Falta uma atividade na lista** | A lista mostra só as **suas**, nos `statuses`. Use **⋯ Ver outros status**, digite para buscar no projeto, ou **✎ Digitar a chave**. O limite é `maxResults` (padrão 20) |
+| **O terminal parou de responder** | Ctrl+C cancela o commit sem mexer em nada. Se acontecer de novo, mande a sequência de teclas para quem mantém a CLI |
+| **As cores não aparecem** | O terminal não é interativo, ou a variável `NO_COLOR` está definida. É só visual |
+| **O Esc demora um pouco** | É normal: o terminal espera ~0,5 s para saber se o Esc é o começo de uma seta |
 
-**O commitlint rejeitou a mensagem depois do jira-commit**
-Confira se o `format` é `{prefix}{key} {subject}` ([seção 6](#6-questionário-do-commit-tipo-escopo-e-descrição)).
+## 16. Perguntas frequentes
 
-**Erro ao criar: tipo de issue inválido**
-O `issueType` não existe no projeto. Rode o `init` num repositório de teste para ver os
-tipos disponíveis, ou ajuste o campo à mão.
+<details>
+<summary><b>Preciso fazer login em cada repositório?</b></summary>
 
-**As cores não aparecem**
-O terminal não é interativo, ou a variável `NO_COLOR` está definida. É só visual e não
-afeta nada.
+Não. O login vale para a máquina inteira. O `init` é que é feito uma vez por repositório.
+</details>
 
-## 13. Perguntas frequentes
+<details>
+<summary><b>O jira-commit muda o status das minhas atividades?</b></summary>
 
-**Preciso fazer login em cada repositório?**
-Não. O login vale para a máquina inteira, e o `init` é que é feito uma vez por repositório.
+Só quando você **cria** uma atividade e escolhe o status inicial. As atividades existentes não
+mudam.
+</details>
 
-**O jira-commit muda o status das minhas atividades?**
-Só quando você **cria** uma atividade e escolhe o status inicial. As atividades existentes
-não mudam.
+<details>
+<summary><b>Posso usar sem commitizen? E sem Conventional Commits?</b></summary>
 
-**Posso usar a CLI sem commitizen?**
-Pode, e é o recomendado: com a seção `commit` no `.jira-commit.json`, o jira-commit faz as
-perguntas de tipo, escopo e descrição ([seção 6](#6-questionário-do-commit-tipo-escopo-e-descrição)).
-Sem essa seção, num `git commit` sem `-m` ele pede a mensagem inteira numa pergunta só (com
-`{prefix}` no `format`, exige `tipo(escopo): descrição`). Em projetos sem commitlint, o formato padrão
+Pode, e é o recomendado: o questionário próprio substitui o commitizen. Sem a seção `commit`,
+um commit sem `-m` pede a mensagem inteira numa pergunta só, e o formato padrão
 `{key}: {message}` gera `LOJA-12: adiciona card`.
+</details>
 
-**Como adiciono um tipo ou escopo?**
-Edite a seção `commit` do `.jira-commit.json` (`types` ou `scopes`) e commite o arquivo. Se o
-`commitlint.config.cjs` lê o mesmo arquivo ([seção 6](#commitlint-com-a-mesma-lista)), ele
-aceita o novo valor na hora.
+<details>
+<summary><b>Como adiciono um tipo ou escopo?</b></summary>
 
-**Onde ficam a "última tarefa pai" e a "última atividade usada"?**
-Em `~/.config/jira-commit/state.json`, separadas por repositório (e a última atividade, por
-branch). É só da sua máquina e não vai para o git.
+Edite a seção `commit` do `.jira-commit.json` (`types` ou `scopes`) e commite. Se o commitlint
+lê o mesmo arquivo ([seção 7](#commitlint-com-a-mesma-lista)), ele aceita o valor novo na hora.
+</details>
 
-**Dá para usar em outro projeto do Jira (outro time)?**
-Dá. Cada repositório tem o seu `.jira-commit.json` com `projectKey`, `issueType` e
-`statuses` próprios.
+<details>
+<summary><b>Onde fica a "última atividade usada"?</b></summary>
+
+Em `~/.config/jira-commit/state.json`, separada por repositório e por branch. É só da sua
+máquina e não vai para o git.
+</details>
+
+<details>
+<summary><b>Dá para usar com outro projeto do Jira, ou outro Jira?</b></summary>
+
+Dá. Cada repositório tem o seu `.jira-commit.json` com `projectKey`, `issueType` e `statuses`
+próprios, e o `jiraUrl` aponta para o Jira certo quando você usa mais de um.
+</details>
