@@ -1,0 +1,3 @@
+# Scripts de shell e tapes do VHS precisam de LF, mesmo com core.autocrlf no Windows
+*.sh   text eol=lf
+*.tape text eol=lf
