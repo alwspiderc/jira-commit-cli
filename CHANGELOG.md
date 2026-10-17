@@ -8,6 +8,16 @@ Mudanças de cada versão do `jira-commit`. O formato segue o
 > As versões 0.1.0 e 0.2.0 foram marcadas depois, nos commits em que cada conjunto ficou pronto.
 > As datas são as dos commits.
 
+## [Não lançado]
+
+### Interno
+
+- O git é chamado de forma assíncrona e com a pasta do repositório informada, em vez de bloquear
+  o processo e depender da pasta atual. Prepara o núcleo para ser usado fora do terminal (ex.: uma
+  extensão do VS Code). Nada muda para quem usa a CLI.
+- A configuração do repositório e o estado salvo (última atividade usada etc.) recebem a raiz do
+  repositório, em vez de descobrir sozinhos.
+
 ## [0.3.0] - 2026-10-16
 
 ### ⚠️ Pode exigir ajuste
