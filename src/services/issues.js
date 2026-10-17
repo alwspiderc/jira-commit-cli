@@ -35,7 +35,7 @@ export async function searchProject(cfg, term) {
 
 export async function loadEpics(cfg) {
   const epics = await openEpics(cfg.projectKey);
-  const state = getRepoState();
+  const state = getRepoState(cfg.root);
   if ('lastEpic' in state) return { epics, suggested: state.lastEpic, why: t.fields.lastEpic };
   const keys = new Set(epics.map((e) => e.key));
   return { epics, suggested: epics.length ? await mostUsedEpic(cfg.projectKey, keys) : null, why: t.fields.mostUsedEpic };

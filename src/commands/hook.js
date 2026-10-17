@@ -20,22 +20,19 @@ export async function hook(msgFile, source) {
   if (!msgFile) throw new Error(t.errors.hookUsage);
   if (READY_SOURCES.includes(source) || process.env.JIRA_COMMIT_SKIP === '1') return;
 
-  const cfg = openProject();
+  const cfg = await openProject();
   const keyRegex = issueKeyRegex(cfg.projectKey);
   let { firstLine, rest } = readMessageFile(msgFile);
   if (keyRegex.test(firstLine)) return;
 
-  const branch = currentBranch();
+  const branch = await currentBranch(cfg.root);
   const context = firstLine ? colorCommitLine(firstLine) : c.dim(t.hook.emptyMessage);
   header(`⎇ ${branch}`, `${context}  ${c.dim(`· ${t.common.escBack}`)}`, { project: cfg.projectKey });
 
   const branchKey = cfg.autoLinkBranch ? branch.match(keyRegex)?.[0] : null;
   const prefetch = branchKey ? null : inBackground(findMyIssues(cfg));
   const opts = !firstLine && commitOptions(cfg);
-  const suggestion =
-    opts && aiEnabled(cfg)
-      ? suggestSubject(cfg, { diff: stagedDiff(), files: stagedFiles(), examples: recentSubjects() })
-      : null;
+  const suggestion = opts && aiEnabled(cfg) ? suggestFromStage(cfg) : null;
 
   const details = { body: '', breaking: '' };
   const save = (line) => writeMessageFile(msgFile, [line, ...detailLines(details), ...rest]);
@@ -73,12 +70,17 @@ export async function hook(msgFile, source) {
 
   const message = formatMessage(cfg.format, result.key, firstLine);
   save(message);
-  rememberIssue(branch, result.key);
+  rememberIssue(cfg.root, branch, result.key);
   const commented = Boolean(commit.comment) && (await postComment(result.key, commit.comment));
   summaryCard({ ...result, commented }, message, issueUrl(result.key));
 }
 
-function rememberIssue(branch, key) {
-  const { lastIssueByBranch } = getRepoState();
-  setRepoState({ lastIssueByBranch: { ...lastIssueByBranch, [branch]: key } });
+async function suggestFromStage(cfg) {
+  const [diff, files, examples] = await Promise.all([stagedDiff(cfg.root), stagedFiles(cfg.root), recentSubjects(cfg.root)]);
+  return suggestSubject(cfg, { diff, files, examples });
+}
+
+function rememberIssue(root, branch, key) {
+  const { lastIssueByBranch } = getRepoState(root);
+  setRepoState(root, { lastIssueByBranch: { ...lastIssueByBranch, [branch]: key } });
 }

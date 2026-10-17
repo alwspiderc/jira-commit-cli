@@ -1,45 +1,52 @@
-import { execSync } from 'node:child_process';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
 import { t } from '../i18n/index.js';
 
-function git(cmd) {
-  return execSync(`git ${cmd}`, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
+const run = promisify(execFile);
+
+// Toda função recebe o cwd primeiro (sem ele, vale a pasta atual). Assíncrono e com cwd: quem roda
+// fora do repositório (ex.: uma extensão de editor) não trava esperando o git nem depende da
+// pasta atual do processo
+async function git(args, { cwd, maxBuffer = 10 * 1024 * 1024 } = {}) {
+  const { stdout } = await run('git', args, { cwd, encoding: 'utf8', maxBuffer, windowsHide: true });
+  return stdout.trim();
 }
 
-export function repoRoot() {
+export async function repoRoot(cwd) {
   try {
-    return git('rev-parse --show-toplevel');
+    return await git(['rev-parse', '--show-toplevel'], { cwd });
   } catch {
     throw new Error(t.errors.notGitRepo);
   }
 }
 
-export function hooksDir() {
-  return git('rev-parse --git-path hooks');
+export function hooksDir(cwd) {
+  return git(['rev-parse', '--git-path', 'hooks'], { cwd });
 }
 
-export function hooksPath() {
+export async function hooksPath(cwd) {
   try {
-    return git('config core.hooksPath');
+    return await git(['config', 'core.hooksPath'], { cwd });
   } catch {
     return '';
   }
 }
 
-export function setHooksPath(path) {
-  git(`config core.hooksPath ${path}`);
+export async function setHooksPath(cwd, path) {
+  await git(['config', 'core.hooksPath', path], { cwd });
 }
 
-export function currentBranch() {
+export async function currentBranch(cwd) {
   try {
-    return git('rev-parse --abbrev-ref HEAD');
+    return await git(['rev-parse', '--abbrev-ref', 'HEAD'], { cwd });
   } catch {
     return '';
   }
 }
 
-export function stagedFiles() {
+export async function stagedFiles(cwd) {
   try {
-    return git('diff --cached --name-status')
+    return (await git(['diff', '--cached', '--name-status'], { cwd }))
       .split('\n')
       .filter(Boolean)
       .map((l) => l.replace(/\t+/g, ' '));
@@ -48,9 +55,9 @@ export function stagedFiles() {
   }
 }
 
-export function recentSubjects(n = 10) {
+export async function recentSubjects(cwd, n = 10) {
   try {
-    return git(`log --no-merges -${n * 5} --format=%s`)
+    return (await git(['log', '--no-merges', `-${n * 5}`, '--format=%s'], { cwd }))
       .split('\n')
       .filter((s) => /^[a-z]+(\([^)]*\))?!?: /.test(s) && !s.includes('[skip ci]'))
       .map((s) =>
@@ -66,13 +73,9 @@ export function recentSubjects(n = 10) {
   }
 }
 
-export function stagedDiff(maxChars = 8000) {
+export async function stagedDiff(cwd, maxChars = 8000) {
   try {
-    const diff = execSync('git diff --cached --no-color --unified=2', {
-      encoding: 'utf8',
-      stdio: ['ignore', 'pipe', 'ignore'],
-      maxBuffer: 50 * 1024 * 1024,
-    });
+    const diff = await git(['diff', '--cached', '--no-color', '--unified=2'], { cwd, maxBuffer: 50 * 1024 * 1024 });
     return diff.length > maxChars ? diff.slice(0, maxChars) + '\n[... diff cortado ...]' : diff;
   } catch {
     return '';

@@ -6,7 +6,7 @@ import { searchResults } from './choose-issue.js';
 
 export async function pickIssue(cfg, { message, branch, keyRegex }) {
   const branchKey = branch.match(keyRegex)?.[0];
-  const lastKey = getRepoState().lastIssueByBranch?.[branch];
+  const lastKey = getRepoState(cfg.root).lastIssueByBranch?.[branch];
   const issues = await withSpinner(t.menu.loading, () => findMyIssues(cfg));
   const choices = issueChoices(issues, { branchKey, lastKey, productSeparator: cfg.productSeparator });
   const listed = new Set(issues.map((i) => i.key));

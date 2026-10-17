@@ -9,10 +9,10 @@ import { askComment, sendComment } from '../flows/comment.js';
 import { pickIssue } from '../flows/pick-issue.js';
 
 export async function comment(args = []) {
-  const cfg = openProject();
+  const cfg = await openProject();
   const keyRegex = issueKeyRegex(cfg.projectKey);
   const { key, text } = parseArgs(cfg, args);
-  const branch = currentBranch();
+  const branch = await currentBranch(cfg.root);
   header(t.comment.title, c.dim(t.common.escBack), { project: cfg.projectKey });
 
   const answers = await runSteps(

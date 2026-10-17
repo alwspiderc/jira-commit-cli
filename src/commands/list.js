@@ -5,7 +5,7 @@ import { openProject } from '../services/project.js';
 import { c, header, log, treeLines, withSpinner } from '../ui/index.js';
 
 export async function list(args = []) {
-  const cfg = openProject();
+  const cfg = await openProject();
   const { all, status } = parseArgs(args);
   header(t.list.title, c.dim(filterLabel(cfg, { all, status })), { project: cfg.projectKey });
 

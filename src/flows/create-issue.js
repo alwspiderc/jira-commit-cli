@@ -15,7 +15,7 @@ import { askStoryPoints, chooseEpic, chooseKind, chooseParent, KIND } from './is
 
 export async function createFromCommit(cfg, commit, issues, keyRegex) {
   const epicsLookup = loadEpics(cfg).catch(() => null);
-  const files = stagedFiles();
+  const files = await stagedFiles(cfg.root);
   const lookupsFor = cached((parent) => startLookups(cfg, parent));
   const suggestionFor = cached((parent) => suggestTitleFor(cfg, { commit, parent, files }));
   let epicsData = null;
@@ -84,8 +84,8 @@ export async function createFromCommit(cfg, commit, issues, keyRegex) {
       }),
     { done: (k) => t.create.created(c.key(k)) },
   );
-  if (parent) setRepoState({ lastParent: parent.key });
-  if (!parent && epicsData?.epics.length) setRepoState({ lastEpic: epic?.key ?? null }); // "sem épico" também é lembrado
+  if (parent) setRepoState(cfg.root, { lastParent: parent.key });
+  if (!parent && epicsData?.epics.length) setRepoState(cfg.root, { lastEpic: epic?.key ?? null }); // "sem épico" também é lembrado
 
   const inSprint = sprint && (await addToSprint(sprint, key));
   const movedTo = await chooseInitialStatus(key);
@@ -136,7 +136,8 @@ function suggestTitleFor(cfg, { commit, parent, files }) {
   if (!aiEnabled(cfg)) return Promise.resolve(null);
   return withSpinner(
     t.create.askingAi,
-    () => suggestTitle(cfg, { diff: stagedDiff(), files, subject: commit.subject, parentSummary: parent?.summary }),
+    async () =>
+      suggestTitle(cfg, { diff: await stagedDiff(cfg.root), files, subject: commit.subject, parentSummary: parent?.summary }),
     { done: (s) => c.dim(s ? t.create.aiReady : t.create.aiNone) },
   );
 }

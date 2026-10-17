@@ -25,7 +25,7 @@ export async function chooseIssue(cfg, { commit, keyRegex, branch, prefetch }) {
     cfg,
     commit,
     branchKey: branch.match(keyRegex)?.[0],
-    lastKey: getRepoState().lastIssueByBranch?.[branch],
+    lastKey: getRepoState(cfg.root).lastIssueByBranch?.[branch],
     found: new Map(),
   };
   let all = false;

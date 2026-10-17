@@ -25,7 +25,7 @@ export function chooseKind(cfg) {
 
 export async function chooseParent(cfg, issues, keyRegex) {
   const roots = buildTree(issues).map((f) => f.root);
-  const { lastParent } = getRepoState();
+  const { lastParent } = getRepoState(cfg.root);
   const tag = `  ${lastTag()}`;
   const choices = roots.map((r) => ({
     name: `${c.key(r.key)}  ${truncate(r.summary, 70)}${r.key === lastParent ? tag : ''}`,

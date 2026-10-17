@@ -41,12 +41,12 @@ export async function diagnose() {
   });
 
   let root;
-  if (!(await check(d.gitRepo, () => ok((root = repoRoot()))))) return results;
+  if (!(await check(d.gitRepo, async () => ok((root = await repoRoot()))))) return results;
 
   let cfg;
   const configOk = await check(PROJECT_FILE, () => {
-    if (!projectConfigExists()) return fail(d.notFound, d.runInit);
-    cfg = readProjectFile();
+    if (!projectConfigExists(root)) return fail(d.notFound, d.runInit);
+    cfg = readProjectFile(root);
     const { errors, warnings } = checkProjectConfig(cfg);
     if (errors.length) return fail(errors.join('; '), d.fixConfig(PROJECT_FILE));
     if (warnings.length) return warn(warnings.join('; '), d.newerFields);
@@ -83,8 +83,8 @@ export async function diagnose() {
     });
   } else skip(d.jiraProject);
 
-  await check(d.hook, () => {
-    const { path, content } = readHook(root);
+  await check(d.hook, async () => {
+    const { path, content } = await readHook(root);
     const where = relative(root, path);
     if (!content?.includes('jira-commit')) return fail(d.notInstalled, d.runInit);
     if (isLegacy(content)) return warn(d.legacyHook(where), d.updateHook);
@@ -92,8 +92,8 @@ export async function diagnose() {
     return ok(where);
   });
 
-  await check(d.hooksDir, () => {
-    const configured = hooksPath();
+  await check(d.hooksDir, async () => {
+    const configured = await hooksPath(root);
     if (existsSync(join(root, '.husky'))) {
       if (configured.startsWith('.husky')) return ok(`.husky (core.hooksPath = ${configured})`);
       return fail(d.huskyInactive, d.runNpmInstall);

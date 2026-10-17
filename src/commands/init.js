@@ -23,20 +23,20 @@ import { c, confirm, header, input, log, select, withSpinner } from '../ui/index
 const COMMIT_SCRIPT = 'git commit --no-edit';
 
 export async function init() {
-  const root = repoRoot();
+  const root = await repoRoot();
   header('init', c.dim(root));
   const commitlint = usesCommitlint(root);
 
-  if (!projectConfigExists()) {
-    saveProjectConfig(await askProjectConfig(commitlint));
+  if (!projectConfigExists(root)) {
+    saveProjectConfig(root, await askProjectConfig(commitlint));
     console.log();
     log.ok(`${t.init.created(c.bold(PROJECT_FILE))} ${c.dim(`· ${t.init.createdHint}`)}`);
   }
 
-  const cfg = readProjectFile();
+  const cfg = readProjectFile(root);
   if (!('commit' in cfg)) {
     cfg.commit = await commitSection(root, commitlint);
-    saveProjectConfig(cfg);
+    saveProjectConfig(root, cfg);
     if (cfg.commit) log.ok(t.init.commitSaved(c.bold(PROJECT_FILE)));
   }
   const questions = Boolean(commitOptions(cfg));
@@ -44,8 +44,8 @@ export async function init() {
   const { installed, versionedHooks } = await setupProject(root);
   linkSchema(root);
 
-  const removeCz = questions && hookHasCz(root) && (await confirmRemoveCz());
-  const { path, result } = installHook(root, { removeCz });
+  const removeCz = questions && (await hookHasCz(root)) && (await confirmRemoveCz());
+  const { path, result } = await installHook(root, { removeCz });
   log.ok(`${t.init.hook[result]} ${c.dim(path)}`);
 
   if (questions) await commitScript(root);
@@ -59,9 +59,9 @@ export async function init() {
 }
 
 function linkSchema(root) {
-  const cfg = readProjectFile();
+  const cfg = readProjectFile(root);
   if (cfg.$schema || !existsSync(join(root, SCHEMA_REF))) return;
-  saveProjectConfig(cfg);
+  saveProjectConfig(root, cfg);
   log.ok(`${t.init.schemaLinked(c.bold(PROJECT_FILE))} ${c.dim('($schema)')}`);
 }
 
@@ -85,7 +85,7 @@ async function setupProject(root) {
 // Sem package.json não há Husky: a pasta versionada vale para o time, mas o core.hooksPath é
 // configuração local, então cada pessoa roda o init uma vez
 async function setupVersionedHooks(root) {
-  if (existsSync(join(root, '.husky')) || hooksPath()) return false;
+  if (existsSync(join(root, '.husky')) || (await hooksPath(root))) return false;
   const dir = join(root, VERSIONED_HOOKS_DIR);
   if (!existsSync(dir)) {
     const custom = customGitHooks(root);
@@ -103,7 +103,7 @@ async function setupVersionedHooks(root) {
     }
     mkdirSync(dir, { recursive: true });
   }
-  setHooksPath(VERSIONED_HOOKS_DIR);
+  await setHooksPath(root, VERSIONED_HOOKS_DIR);
   log.ok(`${t.init.hooksEnabled} ${c.dim(`· git config core.hooksPath ${VERSIONED_HOOKS_DIR}`)}`);
   return true;
 }

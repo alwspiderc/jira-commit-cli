@@ -1,5 +1,6 @@
 import { t } from '../i18n/index.js';
 import { diagnose } from '../services/doctor.js';
+import { repoRoot } from '../infra/git.js';
 import { applyProjectLanguage } from '../services/project.js';
 import { badge, c, header, icon } from '../ui/index.js';
 
@@ -8,7 +9,9 @@ const DETAIL = { ok: (s) => s, warn: c.warn, fail: c.err, info: c.info, skip: c.
 
 // Sem openProject: um .jira-commit.json inválido é justamente o que o doctor mostra
 export async function doctor() {
-  applyProjectLanguage();
+  // Fora de um repositório o doctor ainda roda: é ele que aponta o problema
+  const root = await repoRoot().catch(() => null);
+  if (root) applyProjectLanguage(root);
   header('doctor', c.dim(t.doctor.subtitle));
   const results = await diagnose();
   const width = Math.max(...results.map((r) => r.name.length)) + 2;
