@@ -3,14 +3,16 @@ import { t } from '../i18n/index.js';
 const DEFAULT_MODEL = 'claude-opus-5-5';
 const TIMEOUT_MS = 8_000;
 
-export function aiEnabled(cfg) {
-  return cfg.ai === true && Boolean(process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_AUTH_TOKEN);
+// A chave pode vir de quem chama (ex.: o cofre de senhas de um editor); sem ela, valem as
+// variáveis de ambiente, como o SDK já faz
+export function aiEnabled(cfg, { apiKey } = {}) {
+  return cfg.ai === true && Boolean(apiKey || process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_AUTH_TOKEN);
 }
 
-export async function suggestTitle(cfg, { diff, files, subject, parentSummary }) {
-  if (!aiEnabled(cfg) || (!diff && !files.length)) return null;
+export async function suggestTitle(cfg, { diff, files, subject, parentSummary }, { apiKey } = {}) {
+  if (!aiEnabled(cfg, { apiKey }) || (!diff && !files.length)) return null;
 
-  return ask(cfg, t.ai.titleSystem, [
+  return ask(cfg, apiKey, t.ai.titleSystem, [
     parentSummary && `${t.ai.parentTask}: ${parentSummary}`,
     subject && `${t.ai.commitMessage}: ${subject}`,
     files.length && `${t.ai.changedFiles}:\n${files.join('\n')}`,
@@ -18,10 +20,10 @@ export async function suggestTitle(cfg, { diff, files, subject, parentSummary })
   ]);
 }
 
-export async function suggestSubject(cfg, { diff, files, examples }) {
-  if (!aiEnabled(cfg) || (!diff && !files.length)) return null;
+export async function suggestSubject(cfg, { diff, files, examples }, { apiKey } = {}) {
+  if (!aiEnabled(cfg, { apiKey }) || (!diff && !files.length)) return null;
 
-  return ask(cfg, t.ai.subjectSystem, [
+  return ask(cfg, apiKey, t.ai.subjectSystem, [
     examples.length && `${t.ai.recentSubjects}:\n${examples.join('\n')}`,
     files.length && `${t.ai.changedFiles}:\n${files.join('\n')}`,
     diff && `Diff:\n${diff}`,
@@ -32,10 +34,10 @@ export function systemPrompt(base, instructions) {
   return instructions?.trim() ? `${base}\n\n${t.ai.projectInstructions}: ${instructions.trim()}` : base;
 }
 
-async function ask(cfg, system, context) {
+async function ask(cfg, apiKey, system, context) {
   try {
     const { default: Anthropic } = await import('@anthropic-ai/sdk');
-    const client = new Anthropic({ timeout: TIMEOUT_MS, maxRetries: 0 });
+    const client = new Anthropic({ timeout: TIMEOUT_MS, maxRetries: 0, ...(apiKey && { apiKey }) });
 
     const response = await client.beta.messages.create({
       model: cfg.aiModel ?? DEFAULT_MODEL,

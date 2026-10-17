@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { hasDependency, withHusky } from '../src/infra/package-json.js';
 import { envSite, isSecureUrl, migrateCredentials } from '../src/infra/storage/credentials.js';
-import { aiEnabled } from '../src/infra/ai.js';
+import { aiEnabled, suggestSubject } from '../src/infra/ai.js';
 import { addDevCommand, binCommand, detectPackageManager } from '../src/infra/package-manager.js';
 
 describe('package-json', () => {
@@ -83,15 +83,71 @@ describe('credentials', () => {
 });
 
 describe('ai', () => {
-  it('fica desligada sem "ai": true, mesmo com a chave', () => {
-    const key = process.env.ANTHROPIC_API_KEY;
-    process.env.ANTHROPIC_API_KEY = 'k';
+  const AI_VARS = ['ANTHROPIC_API_KEY', 'ANTHROPIC_AUTH_TOKEN'];
+  // Sem as variáveis de ambiente de quem roda os testes; restaura no fim
+  const withEnv = async (vars, run) => {
+    const saved = Object.fromEntries(AI_VARS.map((name) => [name, process.env[name]]));
+    for (const name of AI_VARS) delete process.env[name];
+    Object.assign(process.env, vars);
     try {
+      return await run();
+    } finally {
+      for (const [name, value] of Object.entries(saved)) {
+        if (value === undefined) delete process.env[name];
+        else process.env[name] = value;
+      }
+    }
+  };
+
+  // Responde como a API da Anthropic e guarda a chave que chegou no cabeçalho
+  const withFakeApi = async (run) => {
+    const realFetch = globalThis.fetch;
+    const keys = [];
+    globalThis.fetch = async (url, init) => {
+      keys.push(new Headers(init.headers).get('x-api-key'));
+      const message = { id: 'msg', type: 'message', role: 'assistant', model: 'm', stop_reason: 'end_turn',
+        content: [{ type: 'text', text: 'adiciona card de benefício' }], usage: { input_tokens: 1, output_tokens: 1 } };
+      return new Response(JSON.stringify(message), { status: 200, headers: { 'content-type': 'application/json' } });
+    };
+    try {
+      return { result: await run(), keys };
+    } finally {
+      globalThis.fetch = realFetch;
+    }
+  };
+
+  const STAGE = { diff: '+novo', files: ['A card.js'], examples: [] };
+
+  it('fica desligada sem "ai": true, mesmo com a chave', () =>
+    withEnv({ ANTHROPIC_API_KEY: 'k' }, () => {
       assert.equal(aiEnabled({}), false);
       assert.equal(aiEnabled({ ai: true }), true);
-    } finally {
-      if (key === undefined) delete process.env.ANTHROPIC_API_KEY;
-      else process.env.ANTHROPIC_API_KEY = key;
-    }
-  });
+    }));
+
+  it('liga com a chave recebida, sem variável de ambiente', () =>
+    withEnv({}, () => {
+      assert.equal(aiEnabled({ ai: true }), false);
+      assert.equal(aiEnabled({ ai: true }, { apiKey: 'k' }), true);
+      assert.equal(aiEnabled({}, { apiKey: 'k' }), false);
+    }));
+
+  it('manda a chave recebida para a API', () =>
+    withEnv({ ANTHROPIC_API_KEY: 'da-variavel' }, async () => {
+      const { result, keys } = await withFakeApi(() => suggestSubject({ ai: true }, STAGE, { apiKey: 'do-cofre' }));
+      assert.equal(result, 'adiciona card de benefício');
+      assert.deepEqual(keys, ['do-cofre']);
+    }));
+
+  it('sem chave recebida, usa a variável de ambiente', () =>
+    withEnv({ ANTHROPIC_API_KEY: 'da-variavel' }, async () => {
+      const { keys } = await withFakeApi(() => suggestSubject({ ai: true }, STAGE));
+      assert.deepEqual(keys, ['da-variavel']);
+    }));
+
+  it('sem chave nenhuma, nem chama a API', () =>
+    withEnv({}, async () => {
+      const { result, keys } = await withFakeApi(() => suggestSubject({ ai: true }, STAGE));
+      assert.equal(result, null);
+      assert.deepEqual(keys, []);
+    }));
 });
