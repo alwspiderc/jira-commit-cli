@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 640" width="1280" height="640">
+  <rect width="1280" height="640" fill="#100e24"/>
+  <g transform="translate(544 96) scale(.75)">
+  <defs>
+    <mask id="notches">
+      <rect width="256" height="256" fill="#fff"/>
+      <circle cx="146" cy="128" r="10" fill="#000"/>
+      <circle cx="222" cy="128" r="10" fill="#000"/>
+    </mask>
+  </defs>
+
+  <rect width="256" height="256" rx="56" fill="#16132f"/>
+
+  <g transform="translate(-6 0)">
+    <!-- tronco do git -->
+    <path d="M84 62V100" stroke="#ec4fd6" stroke-width="10" stroke-linecap="round"/>
+    <path d="M84 156V194" stroke="#4c8dff" stroke-width="10" stroke-linecap="round"/>
+    <circle cx="84" cy="52" r="14" fill="#ec4fd6"/>
+    <circle cx="84" cy="204" r="14" fill="#4c8dff"/>
+
+    <!-- o commit ◆ -->
+    <path d="M84 96L116 128L84 160L52 128Z" fill="#ec4fd6" stroke="#ec4fd6" stroke-width="10" stroke-linejoin="round"/>
+    <path d="M84 118L94 128L84 138L74 128Z" fill="#16132f"/>
+
+    <!-- ligação até a atividade -->
+    <path d="M124 128H146" stroke="#2dd4ee" stroke-width="10" stroke-linecap="round"/>
+
+    <!-- a atividade do Jira -->
+    <rect x="146" y="84" width="76" height="88" rx="16" fill="#332d68" mask="url(#notches)"/>
+    <rect x="162" y="102" width="40" height="14" rx="7" fill="#2dd4ee"/>
+    <rect x="162" y="124" width="44" height="9" rx="4.5" fill="#fff" fill-opacity=".75"/>
+    <rect x="162" y="142" width="28" height="9" rx="4.5" fill="#fff" fill-opacity=".4"/>
+  </g>
+  </g>
+  <text x="640" y="400" text-anchor="middle" font-family="'Segoe UI', Inter, 'Helvetica Neue', Arial, sans-serif" font-weight="800" font-size="104" letter-spacing="-2"><tspan fill="#4c8dff">jira</tspan><tspan fill="#ec4fd6">-commit</tspan></text>
+  <text x="640" y="470" text-anchor="middle" font-family="'Segoe UI', Inter, Arial, sans-serif" font-size="34" fill="#c7cbe8">Cada commit ligado a uma atividade do Jira, sem sair do terminal.</text>
+  <text x="640" y="560" text-anchor="middle" font-family="Consolas, 'Cascadia Code', Menlo, monospace" font-size="28" fill="#8b90b8"><tspan fill="#2dd4ee">$</tspan> npm i -D jira-commit-cli</text>
+</svg>
