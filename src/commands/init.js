@@ -181,7 +181,7 @@ async function askJiraUrl() {
 }
 
 async function askIssueType(projectKey) {
-  const message = t.init.issueType;
+  const message = `${t.init.issueType} ${c.dim(`· ${t.init.issueTypeHint}`)}`;
   let types = [];
   try {
     types = await withSpinner(t.init.loadingTypes, async () =>

@@ -105,7 +105,7 @@ O `jira-commit doctor` mostra quais são.
 
 | Campo | Tipo | Padrão | Para que serve |
 | --- | --- | --- | --- |
-| `issueType` | texto | `"Task"` | Tipo de uma **tarefa sem pai**. Precisa existir no projeto (ex.: `Mobile`, `Backend`) |
+| `issueType` | texto | `"Task"` | Tipo das atividades criadas pela CLI que **não** são subtarefa. Precisa existir no projeto (ex.: `Tarefa`, `Mobile`, `Backend`) |
 | `subtaskType` | texto | descoberto no Jira | Tipo de **subtarefa**. Só defina se o projeto tiver mais de um |
 | `summaryPrefix` | texto | sem prefixo | Prefixo do título. Aceita `{product}` ([veja abaixo](#o-prefixo-do-título)) |
 | `storyPoints` | `true` \| `false` | `true` | `false` não pergunta a estimativa |
