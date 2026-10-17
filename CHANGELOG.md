@@ -20,6 +20,9 @@ Mudanças de cada versão do `jira-commit`. O formato segue o
 - O cliente do Jira passa a ser criado por site (`createJiraClient` e `createJiraApi`), em vez de
   um site global. Dá para falar com dois Jiras ao mesmo tempo; a CLI continua usando um cliente
   padrão.
+- A chave da IA pode ser passada por quem chama (`aiEnabled`, `suggestSubject` e `suggestTitle`
+  aceitam `{ apiKey }`). Sem ela, valem as variáveis `ANTHROPIC_API_KEY` e `ANTHROPIC_AUTH_TOKEN`,
+  como antes.
 
 ## [0.3.0] - 2026-10-16
 
