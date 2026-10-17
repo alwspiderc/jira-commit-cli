@@ -17,6 +17,9 @@ Mudanças de cada versão do `jira-commit`. O formato segue o
   extensão do VS Code). Nada muda para quem usa a CLI.
 - A configuração do repositório e o estado salvo (última atividade usada etc.) recebem a raiz do
   repositório, em vez de descobrir sozinhos.
+- O cliente do Jira passa a ser criado por site (`createJiraClient` e `createJiraApi`), em vez de
+  um site global. Dá para falar com dois Jiras ao mesmo tempo; a CLI continua usando um cliente
+  padrão.
 
 ## [0.3.0] - 2026-10-16
 
