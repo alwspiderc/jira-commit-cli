@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { useSite } from '../src/infra/jira/client.js';
-import { addComment, createIssue, mostUsedEpic, openEpics, searchIssues } from '../src/infra/jira/api.js';
+import { createJiraClient, useSite } from '../src/infra/jira/client.js';
+import { addComment, createIssue, createJiraApi, mostUsedEpic, openEpics, searchIssues } from '../src/infra/jira/api.js';
 import { setLanguage } from '../src/i18n/index.js';
 
 setLanguage('pt');
@@ -125,5 +125,62 @@ describe('Jira Server/Data Center', () => {
     await addComment('APP-1', ['oi', 'tchau']);
     assert.match(calls[0].url, /\/rest\/api\/2\/issue\/APP-1\/comment$/);
     assert.equal(calls[0].body.body, 'oi\n\ntchau');
+  });
+});
+
+describe('cliente por instância', () => {
+  it('dois clientes falam com Jiras diferentes ao mesmo tempo', async () => {
+    route(/search/, () => ({ issues: [] }));
+    const cloud = createJiraApi(createJiraClient(CLOUD));
+    const server = createJiraApi(createJiraClient(SERVER));
+
+    await Promise.all([cloud.searchIssues('project = A'), server.searchIssues('project = B')]);
+
+    const byHost = Object.fromEntries(calls.map((c) => [new URL(c.url).host, c]));
+    assert.match(byHost['a.atlassian.net'].url, /\/rest\/api\/3\/search\/jql\?/);
+    assert.match(byHost['a.atlassian.net'].auth, /^Basic /);
+    assert.match(byHost['jira.cliente.com'].url, /\/rest\/api\/2\/search\?/);
+    assert.equal(byHost['jira.cliente.com'].auth, 'Bearer pat');
+  });
+
+  it('não depende do cliente padrão', async () => {
+    useSite(CLOUD);
+    const server = createJiraApi(createJiraClient(SERVER));
+    await server.addComment('APP-1', ['oi']);
+    assert.match(calls[0].url, /^https:\/\/jira\.cliente\.com\/rest\/api\/2\//);
+  });
+
+  it('guarda o Epic Link separado por cliente', async () => {
+    route(/\/field$/, (call) =>
+      call.url.includes('jira.cliente.com')
+        ? [{ id: 'customfield_1', schema: { custom: 'com.pyxis.greenhopper.jira:gh-epic-link', customId: 1 } }]
+        : [],
+    );
+    route(/myself/, () => ({ name: 'ester' }));
+    route(/\/issue$/, () => ({ key: 'APP-9' }));
+    const withLink = createJiraApi(createJiraClient(SERVER));
+    const withoutLink = createJiraApi(createJiraClient({ ...SERVER, url: 'https://outro.jira.com' }));
+
+    await withLink.createIssue({ projectKey: 'APP', summary: 'T', issueType: 'Task', epicKey: 'APP-1' });
+    assert.equal(calls.at(-1).body.fields.customfield_1, 'APP-1');
+    await withoutLink.createIssue({ projectKey: 'APP', summary: 'T', issueType: 'Task', epicKey: 'APP-1' });
+    assert.equal(calls.at(-1).body.fields.customfield_1, undefined);
+  });
+
+  it('monta o link da atividade com o site do cliente', () => {
+    assert.equal(createJiraClient(SERVER).issueUrl('APP-1'), 'https://jira.cliente.com/browse/APP-1');
+  });
+
+  it('só procura o login no primeiro uso', async () => {
+    const saved = { ...process.env };
+    for (const name of ['JIRA_API_TOKEN', 'JIRA_BASE_URL', 'JIRA_EMAIL', 'JIRA_TYPE']) delete process.env[name];
+    try {
+      const client = createJiraClient('https://sem-login.exemplo.invalid');
+      assert.equal(client.issueUrl('APP-1'), null);
+      await assert.rejects(client.request('/rest/api/3/myself'), /sem-login\.exemplo\.invalid/);
+      assert.equal(calls.length, 0);
+    } finally {
+      Object.assign(process.env, saved);
+    }
   });
 });

@@ -1,6 +1,5 @@
 import { adfDocument } from '../../core/adf.js';
 import { wikiText } from '../../core/wiki.js';
-import { currentSite } from './client.js';
 
 const EPIC_LEVEL = 1;
 const EPIC_NAME = /^(epic|épico)$/i;
@@ -25,5 +24,3 @@ export const DIALECTS = {
     epicByParent: false,
   },
 };
-
-export const dialect = () => DIALECTS[currentSite().type] ?? DIALECTS.cloud;
