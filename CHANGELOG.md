@@ -8,13 +8,21 @@ Mudanças de cada versão do `jira-commit`. O formato segue o
 > As versões 0.1.0 e 0.2.0 foram marcadas depois, nos commits em que cada conjunto ficou pronto.
 > As datas são as dos commits.
 
-## [Não lançado]
+## [0.4.0] - 2026-10-17
+
+### Alterado
+
+- A pergunta do `init` sobre o tipo de atividade ficou mais clara: "Tipo das atividades que você
+  criar", com a dica "fora as subtarefas · ex.: Tarefa, História". O guia de uso e a referência de
+  configuração explicam o `issueType` do mesmo jeito.
 
 ### Interno
 
+Preparação do núcleo para ser usado fora do terminal (ex.: uma extensão do VS Code). **Nada muda
+para quem usa a CLI.**
+
 - O git é chamado de forma assíncrona e com a pasta do repositório informada, em vez de bloquear
-  o processo e depender da pasta atual. Prepara o núcleo para ser usado fora do terminal (ex.: uma
-  extensão do VS Code). Nada muda para quem usa a CLI.
+  o processo e depender da pasta atual.
 - A configuração do repositório e o estado salvo (última atividade usada etc.) recebem a raiz do
   repositório, em vez de descobrir sozinhos.
 - O cliente do Jira passa a ser criado por site (`createJiraClient` e `createJiraApi`), em vez de
@@ -105,6 +113,7 @@ Mudanças de cada versão do `jira-commit`. O formato segue o
 - A busca no projeto acha termos com pontuação.
 - O cursor fica no lugar certo ao digitar um texto longo.
 
+[0.4.0]: https://github.com/alwspiderc/jira-commit-cli/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/alwspiderc/jira-commit-cli/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/alwspiderc/jira-commit-cli/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/alwspiderc/jira-commit-cli/releases/tag/v0.1.0

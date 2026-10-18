@@ -1,6 +1,6 @@
 {
   "name": "jira-commit-cli",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Liga cada commit a uma issue do Jira Cloud (escolhe uma existente ou cria na hora)",
   "author": "Ester <alwesterc@gmail.com>",
   "license": "MIT",

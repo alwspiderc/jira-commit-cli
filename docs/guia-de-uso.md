@@ -63,7 +63,7 @@ npm i -D jira-commit-cli
 
 A CLI entra no `package.json`, e qualquer pessoa que rodar `npm install` fica com ela.
 
-- **Versão fixa:** `npm i -D jira-commit-cli@0.3.0`. Sem versão, o npm instala a mais recente.
+- **Versão fixa:** `npm i -D jira-commit-cli@0.4.0`. Sem versão, o npm instala a mais recente.
 - **Atualizar:** `npm update jira-commit-cli`, ou `npm i -D jira-commit-cli@latest`.
 
 ### Só na sua máquina, sem mexer no `package.json`

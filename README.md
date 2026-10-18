@@ -12,7 +12,7 @@
   <img alt="Jira Cloud e Server" src="https://img.shields.io/badge/jira-Cloud%20%7C%20Server%2FDC-0052CC?logo=jira&logoColor=white">
   <img alt="Português e inglês" src="https://img.shields.io/badge/idiomas-pt%20%7C%20en-8A2BE2">
   <a href="https://github.com/alwspiderc/jira-commit-cli/actions/workflows/test.yml"><img alt="CI" src="https://github.com/alwspiderc/jira-commit-cli/actions/workflows/test.yml/badge.svg?branch=develop"></a>
-  <a href="CHANGELOG.md"><img alt="Versão 0.3.0" src="https://img.shields.io/badge/vers%C3%A3o-0.3.0-blue"></a>
+  <a href="CHANGELOG.md"><img alt="Versão 0.4.0" src="https://img.shields.io/badge/vers%C3%A3o-0.4.0-blue"></a>
 </p>
 
 ---
