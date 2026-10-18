@@ -1,0 +1,14 @@
+{
+  // F5 abre uma janela nova do VS Code com a extensão (pasta vscode/) carregada
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Rodar a extensão",
+      "type": "extensionHost",
+      "request": "launch",
+      "args": ["--extensionDevelopmentPath=${workspaceFolder}/vscode"],
+      "outFiles": ["${workspaceFolder}/vscode/dist/**/*.cjs"],
+      "preLaunchTask": "extensão: build"
+    }
+  ]
+}
