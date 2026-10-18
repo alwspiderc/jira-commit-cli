@@ -23,6 +23,9 @@ Mudanças de cada versão do `jira-commit`. O formato segue o
 - A chave da IA pode ser passada por quem chama (`aiEnabled`, `suggestSubject` e `suggestTitle`
   aceitam `{ apiKey }`). Sem ela, valem as variáveis `ANTHROPIC_API_KEY` e `ANTHROPIC_AUTH_TOKEN`,
   como antes.
+- As regras da criação de atividade saíram das perguntas e foram para `services/create-issue.js`
+  (o que buscar em segundo plano, o que vai para o Jira, o que lembrar para a próxima vez, quais
+  status oferecer). O título com prefixo e a descrição ficaram no `core`, com testes.
 
 ## [0.3.0] - 2026-10-16
 
