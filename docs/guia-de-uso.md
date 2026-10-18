@@ -135,7 +135,7 @@ Pode rodar de novo quando quiser: ele só pergunta o que ainda falta. Em ordem, 
 | --- | --- |
 | Chave do projeto | O prefixo das atividades. Ex.: `LOJA` para `LOJA-2410` |
 | Qual Jira | Só aparece se você fez login em mais de um |
-| Tipo das tarefas criadas sem pai | Escolha na lista, que vem do seu Jira. Ex.: `Mobile` |
+| Tipo das atividades que você criar | O tipo usado quando a atividade criada pela CLI **não** é subtarefa. Escolha na lista, que vem do seu Jira. Ex.: `Tarefa`, `Mobile` |
 | Prefixo do título | Padrão `{product} \| <Tipo>: ` ([veja como funciona](#prefixo-do-título)) |
 | Formato da mensagem | Em projetos com commitlint, aceite `{prefix}{key} {subject}` |
 

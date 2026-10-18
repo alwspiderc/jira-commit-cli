@@ -1,4 +1,6 @@
-<h1 align="center">◆ jira-commit</h1>
+<h1 align="center">
+  <img src="assets/logo-wordmark.svg" alt="jira-commit" width="420">
+</h1>
 
 <p align="center">
   <strong>Cada commit ligado a uma atividade do Jira, sem sair do terminal.</strong><br>
