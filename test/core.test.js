@@ -13,12 +13,12 @@ import {
   splitConventional,
 } from '../src/core/commit-message.js';
 import { commitOptions, fromCz } from '../src/core/commit-options.js';
-import { capitalizeTitle, mostCommonProduct, productOf, resolvePrefix } from '../src/core/issue-title.js';
+import { capitalizeTitle, draftTitle, mostCommonProduct, productOf, resolvePrefix } from '../src/core/issue-title.js';
 import { buildTree } from '../src/core/issue-tree.js';
 import { matchIssues, rankChoices } from '../src/core/issue-match.js';
 import { myIssuesJql, projectSearchJql } from '../src/core/jql.js';
 import { adfDocument } from '../src/core/adf.js';
-import { bodyParagraphs, commentParagraphs } from '../src/core/document.js';
+import { bodyParagraphs, commentParagraphs, issueDescription } from '../src/core/document.js';
 import { wikiText } from '../src/core/wiki.js';
 import { HOOK_BLOCK, hasCurrentBlock, hasCz, isLegacy, withHookBlock } from '../src/core/hook-script.js';
 import { validate } from '../src/core/validate.js';
@@ -119,6 +119,21 @@ describe('issue-title', () => {
     assert.equal(productOf('APP - Mobile: x', ' - '), 'APP');
     assert.equal(mostCommonProduct([{ summary: 'X / a' }, { summary: 'X / b' }], ' / '), 'X');
   });
+
+  it('monta o título da atividade com o produto do pai', () => {
+    const parent = { summary: 'LOJA | Mobile - Benefícios: Criar tela' };
+    assert.deepEqual(draftTitle({ template: '{product} | Mobile: ', subject: 'adiciona card', parent }), {
+      prefix: 'LOJA | Mobile: ',
+      title: 'LOJA | Mobile: Adiciona card',
+    });
+  });
+
+  it('sem pai, usa o produto mais comum; a sugestão da IA vale mais que o commit', () => {
+    const issues = [{ summary: 'A | x' }, { summary: 'B | y' }, { summary: 'B | z' }];
+    const draft = draftTitle({ template: '{product} | Mobile: ', subject: 'commit', suggestion: 'criar card', issues });
+    assert.deepEqual(draft, { prefix: 'B | Mobile: ', title: 'B | Mobile: Criar card' });
+    assert.deepEqual(draftTitle({ template: '{product} | Tarefa: ', subject: 'rasasdasd' }), { prefix: '', title: 'Rasasdasd' });
+  });
 });
 
 describe('issue-tree', () => {
@@ -199,6 +214,15 @@ describe('documento', () => {
       'um\n\ndois\n\nh4. Arquivos alterados\n\n* {{M a.js}}',
     );
     assert.equal(wikiText({}), undefined);
+  });
+
+  it('monta a descrição da atividade com o corpo, o BREAKING CHANGE e os arquivos', () => {
+    const commit = { body: 'corpo da mensagem', details: { body: 'das perguntas', breaking: 'muda a API' } };
+    assert.deepEqual(issueDescription(commit, ['M a.js']), {
+      paragraphs: ['das perguntas', 'BREAKING CHANGE: muda a API', 'corpo da mensagem'],
+      files: ['M a.js'],
+    });
+    assert.deepEqual(issueDescription({ body: '', details: {} }), { paragraphs: [], files: [] });
   });
 });
 

@@ -1,5 +1,6 @@
 import { t } from '../i18n/index.js';
-import { getIssue, getTransitions, moveToSprint, transitionIssue } from '../infra/jira/api.js';
+import { moveToSprint, transitionIssue } from '../infra/jira/api.js';
+import { statusOptions } from '../services/create-issue.js';
 import { c, log, select, withSpinner } from '../ui/index.js';
 
 export async function addToSprint(sprint, key) {
@@ -15,21 +16,15 @@ export async function addToSprint(sprint, key) {
 }
 
 export async function chooseInitialStatus(key) {
-  let transitions;
-  let current;
-  try {
-    [transitions, { status: current }] = await Promise.all([getTransitions(key), getIssue(key)]);
-  } catch {
-    return null;
-  }
+  const options = await statusOptions(key);
+  if (!options) return null;
+  const { current, transitions } = options;
 
   const choice = await select({
     message: t.afterCreate.status(c.key(key)),
     choices: [
       { name: t.afterCreate.keep(c.accent(current)), short: t.afterCreate.keepShort(current), value: null },
-      ...transitions
-        .filter((tr) => tr.to !== current)
-        .map((tr) => ({ name: `→ ${tr.to}`, short: tr.to, value: tr.id })),
+      ...transitions.map((tr) => ({ name: `→ ${tr.to}`, short: tr.to, value: tr.id })),
     ],
   });
   if (!choice) return null;

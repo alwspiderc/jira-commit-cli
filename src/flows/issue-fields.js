@@ -1,7 +1,6 @@
-import { buildTree } from '../core/issue-tree.js';
 import { matchIssues } from '../core/issue-match.js';
 import { t } from '../i18n/index.js';
-import { getRepoState } from '../infra/storage/repo-state.js';
+import { parentCandidates } from '../services/create-issue.js';
 import { truncate } from '../utils/text.js';
 import { BACK, c, lastTag, notice, searchSelect, section, select } from '../ui/index.js';
 import { manualKey } from './manual-key.js';
@@ -24,8 +23,7 @@ export function chooseKind(cfg) {
 }
 
 export async function chooseParent(cfg, issues, keyRegex) {
-  const roots = buildTree(issues).map((f) => f.root);
-  const { lastParent } = getRepoState(cfg.root);
+  const { roots, lastParent, lastParentListed } = parentCandidates(cfg, issues);
   const tag = `  ${lastTag()}`;
   const choices = roots.map((r) => ({
     name: `${c.key(r.key)}  ${truncate(r.summary, 70)}${r.key === lastParent ? tag : ''}`,
@@ -33,7 +31,7 @@ export async function chooseParent(cfg, issues, keyRegex) {
     value: r.key,
     description: r.summary,
   }));
-  if (lastParent && !roots.some((r) => r.key === lastParent)) {
+  if (lastParent && !lastParentListed) {
     choices.unshift({ name: `${c.key(lastParent)}${tag}`, short: lastParent, value: lastParent });
   }
 

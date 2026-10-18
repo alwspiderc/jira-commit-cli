@@ -33,3 +33,11 @@ export function mostCommonProduct(issues, separator = DEFAULT_PRODUCT_SEPARATOR)
   const [best] = [...count.entries()].sort((a, b) => b[1] - a[1]);
   return best?.[0] ?? '';
 }
+
+// Título sugerido ao criar uma atividade: prefixo (com o produto do pai ou, sem pai, o mais comum
+// nas atividades da pessoa) + sugestão da IA ou descrição do commit
+export function draftTitle({ template, separator = DEFAULT_PRODUCT_SEPARATOR, subject = '', suggestion, parent, issues = [] }) {
+  const product = parent ? productOf(parent.summary, separator) : mostCommonProduct(issues, separator);
+  const prefix = resolvePrefix(template, product);
+  return { prefix, title: capitalizeTitle(prefix + (suggestion ?? subject), prefix) };
+}

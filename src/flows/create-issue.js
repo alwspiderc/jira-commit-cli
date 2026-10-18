@@ -1,13 +1,9 @@
-import { bodyParagraphs } from '../core/document.js';
-import { detailLines } from '../core/commit-message.js';
-import { capitalizeTitle, mostCommonProduct, productOf, resolvePrefix } from '../core/issue-title.js';
+import { issueDescription } from '../core/document.js';
+import { capitalizeTitle, draftTitle } from '../core/issue-title.js';
 import { t } from '../i18n/index.js';
-import { aiEnabled, suggestTitle } from '../infra/ai.js';
-import { stagedDiff, stagedFiles } from '../infra/git.js';
-import { activeSprint, createIssue, getIssue, storyPointsField } from '../infra/jira/api.js';
-import { setRepoState } from '../infra/storage/repo-state.js';
-import { loadEpics, subtaskTypeName } from '../services/issues.js';
-import { inBackground } from '../utils/promise.js';
+import { stagedFiles } from '../infra/git.js';
+import { createActivity, creationLookups, loadParent, titleSuggestion } from '../services/create-issue.js';
+import { loadEpics } from '../services/issues.js';
 import { BACK, exit, runSteps } from '../utils/steps.js';
 import { c, confirm, field, withSpinner } from '../ui/index.js';
 import { addToSprint, chooseInitialStatus } from './after-create.js';
@@ -16,7 +12,7 @@ import { askStoryPoints, chooseEpic, chooseKind, chooseParent, KIND } from './is
 export async function createFromCommit(cfg, commit, issues, keyRegex) {
   const epicsLookup = loadEpics(cfg).catch(() => null);
   const files = await stagedFiles(cfg.root);
-  const lookupsFor = cached((parent) => startLookups(cfg, parent));
+  const lookupsFor = cached((parent) => creationLookups(cfg, parent));
   const suggestionFor = cached((parent) => suggestTitleFor(cfg, { commit, parent, files }));
   let epicsData = null;
 
@@ -25,7 +21,7 @@ export async function createFromCommit(cfg, commit, issues, keyRegex) {
     {
       key: 'parent',
       when: (s) => s.kind === KIND.SUBTASK,
-      run: () => loadParent(cfg, issues, keyRegex),
+      run: () => askParent(cfg, issues, keyRegex),
     },
     {
       key: 'epic',
@@ -70,22 +66,17 @@ export async function createFromCommit(cfg, commit, issues, keyRegex) {
   const key = await withSpinner(
     t.create.creating,
     () =>
-      createIssue({
-        projectKey: cfg.projectKey,
+      createActivity(cfg, {
         summary: answers.summary,
         issueType,
-        parentKey: parent?.key,
-        epicKey: epic?.key,
-        description: { paragraphs: bodyParagraphs(fullBody(commit)), files },
-        // a sprint o Jira herda do pai; labels e componentes, não
-        labels: parent?.labels,
-        components: parent?.components,
+        parent,
+        epic,
+        epicAsked: Boolean(epicsData?.epics.length),
         storyPoints,
+        description: issueDescription(commit, files),
       }),
     { done: (k) => t.create.created(c.key(k)) },
   );
-  if (parent) setRepoState(cfg.root, { lastParent: parent.key });
-  if (!parent && epicsData?.epics.length) setRepoState(cfg.root, { lastEpic: epic?.key ?? null }); // "sem épico" também é lembrado
 
   const inSprint = sprint && (await addToSprint(sprint, key));
   const movedTo = await chooseInitialStatus(key);
@@ -114,42 +105,32 @@ function cached(fn) {
   };
 }
 
-async function loadParent(cfg, issues, keyRegex) {
+async function askParent(cfg, issues, keyRegex) {
   const chosen = await chooseParent(cfg, issues, keyRegex);
   if (chosen === BACK) return BACK;
-  return withSpinner(t.create.loading(chosen.key), () => getIssue(chosen.key));
-}
-
-function startLookups(cfg, parent) {
-  const issueType = inBackground(parent ? subtaskTypeName(cfg) : Promise.resolve(cfg.issueType));
-  return {
-    issueType,
-    sprint: parent ? Promise.resolve(null) : activeSprint(cfg.projectKey, cfg.boardId).catch(() => null),
-    pointsField:
-      cfg.storyPoints === false
-        ? Promise.resolve(null)
-        : issueType.then((type) => storyPointsField(cfg.projectKey, type)).catch(() => null),
-  };
+  return withSpinner(t.create.loading(chosen.key), () => loadParent(chosen.key));
 }
 
 function suggestTitleFor(cfg, { commit, parent, files }) {
-  if (!aiEnabled(cfg)) return Promise.resolve(null);
-  return withSpinner(
-    t.create.askingAi,
-    async () =>
-      suggestTitle(cfg, { diff: await stagedDiff(cfg.root), files, subject: commit.subject, parentSummary: parent?.summary }),
-    { done: (s) => c.dim(s ? t.create.aiReady : t.create.aiNone) },
-  );
+  const suggestion = titleSuggestion(cfg, { subject: commit.subject, parent, files });
+  if (!suggestion) return Promise.resolve(null);
+  return withSpinner(t.create.askingAi, () => suggestion, {
+    done: (s) => c.dim(s ? t.create.aiReady : t.create.aiNone),
+  });
 }
 
 async function askTitle(cfg, { commit, issues, parent, suggestion }) {
-  const product = parent
-    ? productOf(parent.summary, cfg.productSeparator)
-    : mostCommonProduct(issues, cfg.productSeparator);
-  const prefix = resolvePrefix(cfg.summaryPrefix, product);
+  const { prefix, title: draft } = draftTitle({
+    template: cfg.summaryPrefix,
+    separator: cfg.productSeparator,
+    subject: commit.subject,
+    suggestion,
+    parent,
+    issues,
+  });
   const title = await field({
     message: suggestion ? `${t.create.title} ${c.dim(`· ${t.create.suggestedByAi}`)}` : t.create.title,
-    default: capitalizeTitle(prefix + (suggestion ?? commit.subject), prefix),
+    default: draft,
     prefill: 'editable',
     validate: (v) => v.trim().length > 0 || t.create.titleEmpty,
     back: true,
@@ -165,8 +146,4 @@ function confirmCreation(cfg, { parent, issueType, epic, sprint }) {
       (epic ? t.create.inEpic(c.key(epic.key)) : '') +
       (sprint ? t.create.inSprint(c.accent(sprint.name)) : '');
   return confirm({ message: t.create.confirm(where), default: true, back: true });
-}
-
-function fullBody(commit) {
-  return [detailLines(commit.details).join('\n').trim(), commit.body].filter(Boolean).join('\n\n');
 }
