@@ -14,6 +14,7 @@ function fakeVscode() {
   const calls = { commands: new Map(), context: {}, messages: [] };
   const event = () => () => ({ dispose() {} });
   const vscode = {
+    version: '1.142.0',
     env: { language: 'pt-br' },
     Uri: { file: (fsPath) => ({ fsPath }) },
     extensions: { getExtension: () => ({ isActive: true, exports: { getAPI: () => vscode.__git } }) },
@@ -27,6 +28,12 @@ function fakeVscode() {
       },
     },
     window: {
+      createOutputChannel: () => ({
+        info: (text) => void calls.messages.push(['log', text]),
+        warn: (text) => void calls.messages.push(['log', text]),
+        error: (text) => void calls.messages.push(['log', text]),
+        dispose() {},
+      }),
       showErrorMessage: async (text) => void calls.messages.push(['error', text]),
       showWarningMessage: async (text) => void calls.messages.push(['warning', text]),
       showInformationMessage: async (text) => void calls.messages.push(['info', text]),
@@ -75,6 +82,9 @@ describe('extensão (bundle)', () => {
 
     assert.equal(fake.calls.context['jiraCommit.configured'], true);
     assert.ok(fake.calls.commands.has('jiraCommit.insertBranchKey'));
+    const logs = fake.calls.messages.filter(([kind]) => kind === 'log').map(([, text]) => text);
+    assert.ok(logs.some((l) => /projeto KAN/.test(l)));
+    assert.ok(logs.some((l) => /botão no Source Control: visível/.test(l)));
 
     await fake.calls.commands.get('jiraCommit.insertBranchKey')({ rootUri: { fsPath: dir } });
     assert.equal(repo.inputBox.value, 'chore(tema): KAN-7 acrescenta o tema escuro');

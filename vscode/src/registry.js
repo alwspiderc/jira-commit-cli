@@ -3,6 +3,7 @@ import { basename } from 'node:path';
 import { PROJECT_FILE } from '../../src/infra/storage/project-config.js';
 import { t } from '../../src/i18n/index.js';
 import { applyLanguage } from './i18n.js';
+import { log } from './log.js';
 import { loadRepoConfig, normalizeRoot } from './repo-config.js';
 
 // Um contexto por repositório aberto: o repositório do git, a raiz e a config do .jira-commit.json.
@@ -15,8 +16,13 @@ export function createRegistry(git) {
     const root = normalizeRoot(repo.rootUri.fsPath);
     const { cfg, error } = loadRepoConfig(root);
     contexts.set(root, { repo, root, cfg, error });
-    if (error) warnInvalid(root, error);
-    else warned.delete(root);
+    if (error) {
+      log.error(`${root}: ${error}`);
+      warnInvalid(root, error);
+    } else {
+      warned.delete(root);
+      log.info(cfg ? `${root}: projeto ${cfg.projectKey}` : `${root}: sem ${PROJECT_FILE}`);
+    }
     updateWhenContext();
   };
 
@@ -31,8 +37,11 @@ export function createRegistry(git) {
   };
 
   // O botão do Source Control só aparece se algum repositório aberto estiver configurado
-  const updateWhenContext = () =>
-    vscode.commands.executeCommand('setContext', 'jiraCommit.configured', [...contexts.values()].some((c) => c.cfg));
+  const updateWhenContext = () => {
+    const configured = [...contexts.values()].some((c) => c.cfg);
+    log.info(`botão no Source Control: ${configured ? 'visível' : 'escondido (nenhum repositório configurado)'}`);
+    return vscode.commands.executeCommand('setContext', 'jiraCommit.configured', configured);
+  };
 
   const rootOf = (uri) => {
     const path = normalizeRoot(uri.fsPath);
@@ -46,6 +55,7 @@ export function createRegistry(git) {
   };
 
   applyLanguage(null);
+  log.info(`repositórios abertos pelo git: ${git.repositories.length}`);
   git.repositories.forEach(refresh);
 
   const disposables = [
