@@ -393,4 +393,13 @@ export default {
     defaultModel: 'modelo padrão',
     aiOff: 'desligada: use "ai": true no .jira-commit.json e defina ANTHROPIC_API_KEY',
   },
+  vscode: {
+    pickRepository: 'Em qual repositório?',
+    notConfigured: (name) => `${name} não tem .jira-commit.json. Rode jira-commit init no terminal.`,
+    invalidConfig: (name, reason) => `jira-commit em ${name}: ${reason}`,
+    openConfig: 'Abrir .jira-commit.json',
+    noBranchKey: (branch, projectKey) => `A branch "${branch}" não tem uma chave ${projectKey}-… no nome.`,
+    noBranch: 'Não há branch ativa (HEAD solto?).',
+    keyInserted: (key) => `${key} na mensagem do commit.`,
+  },
 };
