@@ -16,6 +16,8 @@ import { commitOptions, fromCz } from '../src/core/commit-options.js';
 import { capitalizeTitle, draftTitle, mostCommonProduct, productOf, resolvePrefix } from '../src/core/issue-title.js';
 import { buildTree } from '../src/core/issue-tree.js';
 import { matchIssues, rankChoices } from '../src/core/issue-match.js';
+import { initialKey, searchGroups, unlistedLastKey } from '../src/core/issue-menu.js';
+import { issueChoices } from '../src/ui/issue-choices.js';
 import { myIssuesJql, projectSearchJql } from '../src/core/jql.js';
 import { adfDocument } from '../src/core/adf.js';
 import { bodyParagraphs, commentParagraphs, issueDescription } from '../src/core/document.js';
@@ -174,6 +176,55 @@ describe('issue-match', () => {
     const choices = [{ keywords: 'refactor' }, { keywords: 'feat' }];
     assert.deepEqual(rankChoices(choices, 'f'), [{ keywords: 'feat' }, { keywords: 'refactor' }]);
     assert.deepEqual(rankChoices(choices, 'zzz'), []);
+  });
+});
+
+describe('issue-menu', () => {
+  const task = (key, summary = key) => ({ key, summary, status: 'A fazer', parent: null });
+  const sub = (key, parentKey) => ({ key, summary: key, status: 'A fazer', parent: { key: parentKey, summary: parentKey } });
+  // APP-1 com a subtarefa APP-3; APP-5 é subtarefa de um pai fora da lista (APP-9, só contexto)
+  const issues = [task('APP-1', 'Tela de login'), sub('APP-3', 'APP-1'), task('APP-2', 'Card de benefício'), sub('APP-5', 'APP-9')];
+
+  it('o cursor começa na atividade da branch, senão na última usada', () => {
+    assert.equal(initialKey(issues, { branchKey: 'APP-3', lastKey: 'APP-2' }), 'APP-3');
+    assert.equal(initialKey(issues, { branchKey: 'APP-77', lastKey: 'APP-2' }), 'APP-2');
+  });
+
+  it('a última usada fora da lista vale se aparece à parte', () => {
+    assert.equal(initialKey(issues, { lastKey: 'APP-40' }), 'APP-1');
+    assert.equal(initialKey(issues, { lastKey: 'APP-40', extraKeys: ['APP-40'] }), 'APP-40');
+  });
+
+  it('sem branch nem última usada, começa na primeira que dá para escolher, como no menu', () => {
+    const firstChoice = (list, branchKey) => issueChoices(list, { branchKey }).find((ch) => ch.value)?.value;
+    const onlyContext = [sub('APP-5', 'APP-9'), task('APP-2')];
+    for (const [list, branchKey] of [[issues], [issues, 'APP-5'], [onlyContext], [[]]]) {
+      assert.equal(initialKey(list, { branchKey }), firstChoice(list, branchKey));
+    }
+    assert.equal(initialKey(onlyContext, {}), 'APP-5');
+  });
+
+  it('a última usada só aparece à parte se saiu da lista e não é a da branch', () => {
+    assert.equal(unlistedLastKey(issues, { lastKey: 'APP-40' }), 'APP-40');
+    assert.equal(unlistedLastKey(issues, { lastKey: 'APP-2' }), null);
+    assert.equal(unlistedLastKey(issues, { lastKey: 'APP-40', branchKey: 'APP-40' }), null);
+    assert.equal(unlistedLastKey(issues, {}), null);
+  });
+
+  it('a busca separa as suas das do projeto, sem repetir', () => {
+    const remote = { status: 'done', results: [task('APP-2'), task('APP-80', 'Card de outra pessoa')] };
+    const groups = searchGroups(issues, 'card', remote, 'APP');
+    assert.deepEqual(groups.mine.map((i) => i.key), ['APP-2']);
+    assert.deepEqual(groups.others.map((i) => i.key), ['APP-80']);
+    assert.equal(groups.empty, false);
+  });
+
+  it('a busca diz se ainda está buscando, se falhou ou se não achou nada', () => {
+    const idle = { status: 'idle', results: [] };
+    assert.equal(searchGroups(issues, 'card', { status: 'loading', results: [] }, 'APP').searching, true);
+    assert.equal(searchGroups(issues, 'a', { status: 'loading', results: [] }, 'APP').searching, false);
+    assert.equal(searchGroups(issues, 'zzz', { status: 'error', results: [] }, 'APP').failed, true);
+    assert.equal(searchGroups(issues, 'zzz', idle, 'APP').empty, true);
   });
 });
 

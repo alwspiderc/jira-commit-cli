@@ -1,5 +1,4 @@
-import { matchIssues } from '../core/issue-match.js';
-import { projectSearchJql } from '../core/jql.js';
+import { initialKey, searchGroups, unlistedLastKey } from '../core/issue-menu.js';
 import { t } from '../i18n/index.js';
 import { getIssue } from '../infra/jira/api.js';
 import { getRepoState } from '../infra/storage/repo-state.js';
@@ -98,11 +97,8 @@ function loadIssues(cfg, all, prefetch) {
 
 function issueMenu({ cfg, commit, branchKey, lastKey, found }, issues, all) {
   const taskChoices = issueChoices(issues, { branchKey, lastKey, productSeparator: cfg.productSeparator });
-  const lastChoice =
-    lastKey && lastKey !== branchKey && !issues.some((i) => i.key === lastKey)
-      ? [{ name: `${c.key(lastKey)}  ${lastTag()}`, short: lastKey, value: lastKey }]
-      : [];
-  const keys = new Set([...lastChoice, ...taskChoices].map((ch) => ch.value).filter(Boolean));
+  const unlisted = unlistedLastKey(issues, { branchKey, lastKey });
+  const lastChoice = unlisted ? [{ name: `${c.key(unlisted)}  ${lastTag()}`, short: unlisted, value: unlisted }] : [];
   const actions = menuActions({
     all,
     hasDetails: Boolean(commit.details.body || commit.details.breaking),
@@ -112,7 +108,7 @@ function issueMenu({ cfg, commit, branchKey, lastKey, found }, issues, all) {
   return searchSelect({
     message: `${t.menu.question} ${c.dim(`${all ? `· ${t.menu.allStatuses} ` : ''}· ${t.common.typeToSearch}`)}`,
     pageSize: PAGE_SIZE,
-    default: [branchKey, lastKey].find((k) => keys.has(k)) ?? taskChoices.find((ch) => ch.value)?.value,
+    default: initialKey(issues, { branchKey, lastKey, extraKeys: unlisted ? [unlisted] : [] }),
     items: (term, remote) =>
       term
         ? searchResults(term, remote, { cfg, issues, branchKey, lastKey, actions })
@@ -152,13 +148,7 @@ function menuActions({ all, hasDetails, hasComment }) {
 
 export function searchResults(term, remote, { cfg, issues, branchKey, lastKey, actions = [] }) {
   const m = t.menu;
-  const local = matchIssues(issues, term);
-  const isMine = (r) => issues.some((i) => i.key === r.key);
-  const mine = [...local, ...remote.results.filter((r) => isMine(r) && !local.some((l) => l.key === r.key))];
-  const others = remote.results.filter((r) => !isMine(r));
-  const searching = remote.status === 'loading' && Boolean(projectSearchJql(cfg.projectKey, term));
-  const failed = remote.status === 'error';
-  const nothing = !mine.length && !others.length && !searching && !failed;
+  const { mine, others, searching, failed, empty } = searchGroups(issues, term, remote, cfg.projectKey);
   const choicesOf = (list, marks) => issueChoices(list, { ...marks, productSeparator: cfg.productSeparator });
 
   return [
@@ -166,7 +156,7 @@ export function searchResults(term, remote, { cfg, issues, branchKey, lastKey, a
     ...(searching ? [section(`── ${m.searchingProject}`)] : []),
     ...(failed ? [section(`── ${m.searchFailed}`)] : []),
     ...(others.length ? [section(`── ${m.others} (${others.length})`), ...choicesOf(others)] : []),
-    ...(nothing ? [notice(m.none)] : []),
+    ...(empty ? [notice(m.none)] : []),
     ...(actions.length ? [section(`── ${m.actions}`), ...actions] : []),
   ];
 }
