@@ -1,0 +1,77 @@
+{
+  "name": "jira-commit-vscode",
+  "displayName": "jira-commit",
+  "description": "%description%",
+  "version": "0.0.1",
+  "publisher": "alwspiderc",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/alwspiderc/jira-commit-cli.git",
+    "directory": "vscode"
+  },
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "SCM Providers",
+    "Other"
+  ],
+  "main": "./dist/extension.cjs",
+  "extensionDependencies": [
+    "vscode.git"
+  ],
+  "activationEvents": [
+    "workspaceContains:**/.jira-commit.json"
+  ],
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": false,
+      "description": "%untrusted%"
+    }
+  },
+  "contributes": {
+    "commands": [
+      {
+        "command": "jiraCommit.insertBranchKey",
+        "title": "%command.insertBranchKey%",
+        "category": "Jira Commit",
+        "icon": "$(link)"
+      }
+    ],
+    "menus": {
+      "scm/title": [
+        {
+          "command": "jiraCommit.insertBranchKey",
+          "when": "scmProvider == git && jiraCommit.configured",
+          "group": "navigation"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "jiraCommit.insertBranchKey",
+          "when": "jiraCommit.configured"
+        }
+      ]
+    },
+    "jsonValidation": [
+      {
+        "fileMatch": ".jira-commit.json",
+        "url": "./dist/jira-commit.schema.json"
+      }
+    ]
+  },
+  "scripts": {
+    "build": "node esbuild.mjs",
+    "watch": "node esbuild.mjs --watch",
+    "package": "node esbuild.mjs --production && vsce package --no-dependencies",
+    "test": "node esbuild.mjs && node --test \"test/**/*.test.js\""
+  },
+  "devDependencies": {
+    "@types/vscode": "1.90.0",
+    "@vscode/vsce": "4.0.0",
+    "esbuild": "0.28.2"
+  }
+}

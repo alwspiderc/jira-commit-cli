@@ -1,0 +1,5 @@
+{
+  "description": "Cada commit ligado a uma atividade do Jira, direto do Source Control",
+  "untrusted": "Lê a configuração do repositório e roda o git.",
+  "command.insertBranchKey": "Pôr a chave da atividade da branch na mensagem do commit"
+}

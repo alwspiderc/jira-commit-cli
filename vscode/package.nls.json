@@ -1,0 +1,5 @@
+{
+  "description": "Link every commit to a Jira issue, right from Source Control",
+  "untrusted": "Reads the repository configuration and runs git.",
+  "command.insertBranchKey": "Put the branch issue key in the commit message"
+}
